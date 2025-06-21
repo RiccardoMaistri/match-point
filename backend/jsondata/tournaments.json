@@ -1,0 +1,138 @@
+[
+  {
+    "id": "fdb8f1b0-f7b9-44b0-9a6e-49f4a6089728",
+    "name": "Summer Open 2024",
+    "tournament_type": "single",
+    "format": "elimination",
+    "start_date": "2024-07-15T10:00:00Z",
+    "participants": [
+      {
+        "id": "p1-summer",
+        "name": "Alice Wonderland",
+        "email": "alice@example.com",
+        "ranking": 1
+      },
+      {
+        "id": "p2-summer",
+        "name": "Bob The Builder",
+        "email": "bob@example.com",
+        "ranking": 2
+      },
+      {
+        "id": "p3-summer",
+        "name": "Charlie Chaplin",
+        "email": "charlie@example.com",
+        "ranking": 3
+      },
+      {
+        "id": "p4-summer",
+        "name": "Diana Prince",
+        "email": "diana@example.com",
+        "ranking": 4
+      }
+    ],
+    "matches": [
+        {
+            "id": "m1-summer-r1",
+            "round_number": 1,
+            "match_number": 1,
+            "participant1_id": "p1-summer",
+            "participant2_id": "p4-summer",
+            "winner_id": null,
+            "score_participant1": null,
+            "score_participant2": null,
+            "is_bye": false,
+            "status": "pending"
+        },
+        {
+            "id": "m2-summer-r1",
+            "round_number": 1,
+            "match_number": 2,
+            "participant1_id": "p2-summer",
+            "participant2_id": "p3-summer",
+            "winner_id": null,
+            "score_participant1": null,
+            "score_participant2": null,
+            "is_bye": false,
+            "status": "pending"
+        }
+    ],
+    "registration_open": false,
+    "invitation_link": "/join/summer2024"
+  },
+  {
+    "id": "a0c2f7e1-8c1f-4ea3-9f7a-7a8dcb3f0f3d",
+    "name": "Autumn Round Robin League",
+    "tournament_type": "single",
+    "format": "round_robin",
+    "start_date": "2024-09-10T18:00:00Z",
+    "participants": [
+      {
+        "id": "p1-autumn",
+        "name": "Eve Harrington",
+        "email": "eve@example.com",
+        "ranking": 10
+      },
+      {
+        "id": "p2-autumn",
+        "name": "Frankenstein Jr.",
+        "email": "frank@example.com",
+        "ranking": 12
+      },
+      {
+        "id": "p3-autumn",
+        "name": "Grace Kelly",
+        "email": "grace@example.com",
+        "ranking": 11
+      }
+    ],
+    "matches": [
+        {
+            "id": "m1-autumn",
+            "match_number": 1,
+            "participant1_id": "p1-autumn",
+            "participant2_id": "p2-autumn",
+            "winner_id": "p1-autumn",
+            "score_participant1": 2,
+            "score_participant2": 0,
+            "is_bye": false,
+            "status": "completed"
+        },
+        {
+            "id": "m2-autumn",
+            "match_number": 2,
+            "participant1_id": "p1-autumn",
+            "participant2_id": "p3-autumn",
+            "winner_id": null,
+            "score_participant1": null,
+            "score_participant2": null,
+            "is_bye": false,
+            "status": "pending"
+        },
+        {
+            "id": "m3-autumn",
+            "match_number": 3,
+            "participant1_id": "p2-autumn",
+            "participant2_id": "p3-autumn",
+            "winner_id": null,
+            "score_participant1": null,
+            "score_participant2": null,
+            "is_bye": false,
+            "status": "pending"
+        }
+    ],
+    "registration_open": true,
+    "invitation_link": "/join/autumnleague"
+  },
+  {
+    "id": "b1d3g8f2-9c2g-5fb4-0g8b-8b9ecb4g1g4e",
+    "name": "Winter Blitz",
+    "tournament_type": "double",
+    "format": "elimination",
+    "start_date": null,
+    "participants": [],
+    "matches": [],
+    "registration_open": true,
+    "invitation_link": "/join/winterblitz"
+  }
+]
