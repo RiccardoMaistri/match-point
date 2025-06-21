@@ -1,5 +1,3 @@
-import reportWebVitals from './reportWebVitals';
-
 import { ReportHandler } from 'web-vitals';
 
 const reportWebVitals = (onPerfEntry?: ReportHandler) => {
