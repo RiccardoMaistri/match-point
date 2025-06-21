@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { createTournament } from '../api';
 import { TournamentCreate } from '../types';
 import {
-  Container, Typography, TextField, Button, Box, Select, MenuItem, FormControl, InputLabel, CircularProgress, Alert, Paper, Grid
+  Container, Typography, TextField, Button, Box, Select, MenuItem, FormControl,
+  InputLabel, CircularProgress, Alert, Paper, Grid
 } from '@mui/material';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFnsV3';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider, DateTimePicker } from '@mui/x-date-pickers';
-import { isValid, formatISO } from 'date-fns';
+import { isValid, format } from 'date-fns';
 import itLocale from 'date-fns/locale/it';
+
 
 
 const CreateTournamentPage: React.FC = () => {
@@ -38,8 +40,8 @@ const CreateTournamentPage: React.FC = () => {
       name: tournamentName,
       type: tournamentType,
       format: tournamentFormat,
-      start_date: startDate && isValid(startDate) ? formatISO(startDate) : null,
-      end_date: endDate && isValid(endDate) ? formatISO(endDate) : null,
+      start_date: startDate && isValid(startDate) ? format(startDate) : null,
+      end_date: endDate && isValid(endDate) ? format(endDate) : null,
     };
 
     setLoading(true);
