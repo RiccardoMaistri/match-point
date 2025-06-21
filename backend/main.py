@@ -47,7 +47,7 @@ def load_data(file_path: str) -> List[Dict]:
     except (json.JSONDecodeError, FileNotFoundError):
         return []
 
-def_save_data(file_path: str, data: List[Dict]):
+def save_data(file_path: str, data: List[Dict]):
     def_ensure_data_dir_exists()
     with open(file_path, "w") as f:
         json.dump(data, f, indent=4, default=str) # default=str per datetime e UUID
