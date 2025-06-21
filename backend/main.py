@@ -1,18 +1,14 @@
-from fastapi import FastAPI, HTTPException, status, Path, Query
-from fastapi.middleware.cors import CORSMiddleware
-from typing import List, Dict, Optional
 import json
-from uuid import UUID, uuid4
-from datetime import datetime
 import os
-import math
 import random
+from typing import Dict, List, Optional
+from uuid import UUID, uuid4
 
-from models import (
-    Tournament, TournamentCreate,
-    Participant, ParticipantCreate,
-    Match, MatchResult
-)
+import math
+from fastapi import FastAPI, HTTPException, Path, status
+from fastapi.middleware.cors import CORSMiddleware
+
+from models import (Match, MatchResult, Participant, ParticipantCreate, Tournament, TournamentCreate)
 
 app = FastAPI(
     title="Tournament Manager API",
@@ -47,13 +43,15 @@ def load_data(file_path: str) -> List[Dict]:
     except (json.JSONDecodeError, FileNotFoundError):
         return []
 
+
 def save_data(file_path: str, data: List[Dict]):
-    def_ensure_data_dir_exists()
     with open(file_path, "w") as f:
-        json.dump(data, f, indent=4, default=str) # default=str per datetime e UUID
+        json.dump(data, f, indent=4, default=str)  # default=str per datetime e UUID
+
 
 # Carica i dati all'avvio (simulazione di un "database")
 tournaments_db: List[Tournament] = [Tournament(**t) for t in load_data(TOURNAMENTS_FILE)]
+
 
 def find_tournament_by_id(tournament_id: UUID) -> Optional[Tournament]:
     for t in tournaments_db:
@@ -183,7 +181,9 @@ async def add_participant_to_tournament(
     save_data(TOURNAMENTS_FILE, [t.model_dump() for t in tournaments_db])
     return new_participant
 
-@app.get("/tournaments/{tournament_id}/participants", response_model=List[Participant], summary="Ottieni la lista dei partecipanti di un torneo")
+
+@app.get("/tournaments/{tournament_id}/participants", response_model=List[Participant],
+         summary="Ottieni la lista dei partecipanti di un torneo")
 async def get_tournament_participants(tournament_id: UUID = Path(..., description="ID del torneo")):
     """
     Restituisce la lista di tutti i partecipanti per un torneo specifico.
@@ -524,8 +524,9 @@ async def get_tournament_standings(tournament_id: UUID = Path(..., description="
 
 if __name__ == "__main__":
     import uvicorn
+
     ensure_data_dir_exists()
     # Crea file JSON vuoti se non esistono per evitare errori al primo avvio se non ci sono dati
     if not os.path.exists(TOURNAMENTS_FILE): save_data(TOURNAMENTS_FILE, [])
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8001)

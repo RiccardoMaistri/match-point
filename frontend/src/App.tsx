@@ -1,3 +1,5 @@
+import App from './App';
+
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link as RouterLink } from 'react-router-dom';
 import { AppBar, Toolbar, Typography, Container, Button, Box, CssBaseline } from '@mui/material';
