@@ -1,15 +1,11 @@
-from fastapi import FastAPI, HTTPException, Path, Body, status
-from typing import List, Optional
-from .models import Tournament, Participant, Match # Usiamo i percorsi relativi per i moduli locali
-from .database import (
-    get_all_tournaments_db,
-    get_tournament_db,
-    create_tournament_db,
-    update_tournament_db,
-    delete_tournament_db
-)
 import uuid
-from datetime import datetime
+from typing import List, Optional
+
+from fastapi import Body, FastAPI, HTTPException, Path, status
+
+from .database import (create_tournament_db, delete_tournament_db, get_all_tournaments_db, get_tournament_db,
+                       update_tournament_db)
+from .models import Match, Participant, Tournament  # Usiamo i percorsi relativi per i moduli locali
 
 app = FastAPI(
     title="Tournament Manager API",
@@ -17,9 +13,11 @@ app = FastAPI(
     version="0.1.0"
 )
 
+
 # --- Endpoints Tornei ---
 
-@app.post("/tournaments/", response_model=Tournament, status_code=status.HTTP_201_CREATED, summary="Crea un nuovo torneo")
+@app.post("/tournaments/", response_model=Tournament, status_code=status.HTTP_201_CREATED,
+          summary="Crea un nuovo torneo")
 async def create_tournament(tournament_data: Tournament = Body(...)):
     """
     Crea un nuovo torneo con i dati forniti.
@@ -63,8 +61,8 @@ async def get_tournament(tournament_id: str = Path(..., description="ID del torn
 
 @app.put("/tournaments/{tournament_id}", response_model=Tournament, summary="Aggiorna un torneo esistente")
 async def update_tournament(
-    tournament_id: str = Path(..., description="ID del torneo da aggiornare"),
-    tournament_update: Tournament = Body(...) # Qui potremmo usare un modello diverso per l'update parziale
+        tournament_id: str = Path(..., description="ID del torneo da aggiornare"),
+        tournament_update: Tournament = Body(...)  # Qui potremmo usare un modello diverso per l'update parziale
 ):
     """
     Aggiorna i dettagli di un torneo esistente.
@@ -96,16 +94,17 @@ async def delete_tournament(tournament_id: str = Path(..., description="ID del t
     """
     if not delete_tournament_db(tournament_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found for deletion")
-    return # No content response
+    return  # No content response
 
 
 # --- Endpoints Partecipanti (da implementare) ---
 # Questi endpoint agiranno su un torneo specifico
 
-@app.post("/tournaments/{tournament_id}/participants/", response_model=Participant, status_code=status.HTTP_201_CREATED, summary="Aggiungi un partecipante a un torneo")
+@app.post("/tournaments/{tournament_id}/participants/", response_model=Participant, status_code=status.HTTP_201_CREATED,
+          summary="Aggiungi un partecipante a un torneo")
 async def add_participant_to_tournament(
-    tournament_id: str = Path(..., description="ID del torneo"),
-    participant_data: Participant = Body(...)
+        tournament_id: str = Path(..., description="ID del torneo"),
+        participant_data: Participant = Body(...)
 ):
     tournament_dict = get_tournament_db(tournament_id)
     if not tournament_dict:
@@ -116,7 +115,8 @@ async def add_participant_to_tournament(
     # Verifica se il partecipante (basato sull'email, per esempio) esiste già
     for p in tournament.participants:
         if p.email == participant_data.email:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Participant with email {participant_data.email} already registered.")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                detail=f"Participant with email {participant_data.email} already registered.")
 
     # Il modello Participant già assegna un ID
     new_participant = Participant(**participant_data.model_dump())
@@ -126,7 +126,8 @@ async def add_participant_to_tournament(
     return new_participant
 
 
-@app.get("/tournaments/{tournament_id}/participants/", response_model=List[Participant], summary="Ottieni i partecipanti di un torneo")
+@app.get("/tournaments/{tournament_id}/participants/", response_model=List[Participant],
+         summary="Ottieni i partecipanti di un torneo")
 async def get_tournament_participants(tournament_id: str = Path(..., description="ID del torneo")):
     tournament_dict = get_tournament_db(tournament_id)
     if not tournament_dict:
@@ -135,10 +136,11 @@ async def get_tournament_participants(tournament_id: str = Path(..., description
     return tournament.participants
 
 
-@app.delete("/tournaments/{tournament_id}/participants/{participant_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Rimuovi un partecipante da un torneo")
+@app.delete("/tournaments/{tournament_id}/participants/{participant_id}", status_code=status.HTTP_204_NO_CONTENT,
+            summary="Rimuovi un partecipante da un torneo")
 async def remove_participant_from_tournament(
-    tournament_id: str = Path(..., description="ID del torneo"),
-    participant_id: str = Path(..., description="ID del partecipante da rimuovere")
+        tournament_id: str = Path(..., description="ID del torneo"),
+        participant_id: str = Path(..., description="ID del partecipante da rimuovere")
 ):
     tournament_dict = get_tournament_db(tournament_id)
     if not tournament_dict:
@@ -169,10 +171,11 @@ async def generate_matches_for_tournament(tournament_id: str = Path(..., descrip
 
     tournament = Tournament(**tournament_dict)
     if not tournament.participants or len(tournament.participants) < 2:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Not enough participants to generate matches.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Not enough participants to generate matches.")
 
     # Logica di generazione placeholder
-    tournament.matches = [] # Resetta i match esistenti
+    tournament.matches = []  # Resetta i match esistenti
     if tournament.format == "elimination":
         # Semplice logica di placeholder per eliminazione diretta
         # In un'implementazione reale, questo sarebbe molto più complesso
@@ -182,34 +185,35 @@ async def generate_matches_for_tournament(tournament_id: str = Path(..., descrip
         if num_participants % 2 == 0:
             for i in range(0, num_participants, 2):
                 p1 = tournament.participants[i]
-                p2 = tournament.participants[i+1]
+                p2 = tournament.participants[i + 1]
                 match = Match(
                     participant1_id=p1.id,
                     participant2_id=p2.id,
                     round_number=1,
-                    match_number=(i//2)+1
+                    match_number=(i // 2) + 1
                 )
                 tournament.matches.append(match)
         else:
             # Gestione bye semplificata (il primo partecipante passa)
             # Questo è solo un esempio, non una logica di bracket completa
-            tournament.matches.append(Match(participant1_id=tournament.participants[0].id, is_bye=True, round_number=1, match_number=1))
+            tournament.matches.append(
+                Match(participant1_id=tournament.participants[0].id, is_bye=True, round_number=1, match_number=1))
             for i in range(1, num_participants, 2):
-                 if i+1 < num_participants:
+                if i + 1 < num_participants:
                     p1 = tournament.participants[i]
-                    p2 = tournament.participants[i+1]
+                    p2 = tournament.participants[i + 1]
                     match = Match(
                         participant1_id=p1.id,
                         participant2_id=p2.id,
                         round_number=1,
-                        match_number=((i-1)//2)+2
+                        match_number=((i - 1) // 2) + 2
                     )
                     tournament.matches.append(match)
 
 
     elif tournament.format == "round_robin":
         # Semplice logica di placeholder per girone all'italiana
-        participants_shuffled = tournament.participants[:] # Copia
+        participants_shuffled = tournament.participants[:]  # Copia
         # random.shuffle(participants_shuffled) # Opzionale: mescolare i partecipanti
 
         num_participants = len(participants_shuffled)
@@ -224,12 +228,14 @@ async def generate_matches_for_tournament(tournament_id: str = Path(..., descrip
                     match_number=match_num_counter
                 )
                 tournament.matches.append(match)
-                match_num_counter +=1
+                match_num_counter += 1
     else:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Tournament format not supported for match generation yet.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Tournament format not supported for match generation yet.")
 
     update_tournament_db(tournament_id, tournament.model_dump())
-    return {"message": "Matches generated (placeholder logic)", "tournament_id": tournament_id, "matches": tournament.matches}
+    return {"message": "Matches generated (placeholder logic)", "tournament_id": tournament_id,
+            "matches": tournament.matches}
 
 
 @app.get("/tournaments/{tournament_id}/matches", response_model=List[Match], summary="Ottieni i match di un torneo")
@@ -241,13 +247,15 @@ async def get_tournament_matches(tournament_id: str = Path(..., description="ID 
     return tournament.matches
 
 
-@app.post("/tournaments/{tournament_id}/matches/{match_id}/result", response_model=Match, summary="Inserisci/Aggiorna il risultato di un match")
+@app.post("/tournaments/{tournament_id}/matches/{match_id}/result", response_model=Match,
+          summary="Inserisci/Aggiorna il risultato di un match")
 async def record_match_result(
-    tournament_id: str = Path(..., description="ID del torneo"),
-    match_id: str = Path(..., description="ID del match"),
-    score_participant1: Optional[int] = Body(None, embed=True),
-    score_participant2: Optional[int] = Body(None, embed=True),
-    winner_id: Optional[str] = Body(None, embed=True) # Il client dovrebbe determinare il vincitore o l'API lo deduce
+        tournament_id: str = Path(..., description="ID del torneo"),
+        match_id: str = Path(..., description="ID del match"),
+        score_participant1: Optional[int] = Body(None, embed=True),
+        score_participant2: Optional[int] = Body(None, embed=True),
+        winner_id: Optional[str] = Body(None, embed=True)
+        # Il client dovrebbe determinare il vincitore o l'API lo deduce
 ):
     tournament_dict = get_tournament_db(tournament_id)
     if not tournament_dict:
@@ -278,7 +286,8 @@ async def record_match_result(
     # Determina il vincitore se non fornito esplicitamente e i punteggi sono presenti
     if winner_id:
         if winner_id not in [match_to_update.participant1_id, match_to_update.participant2_id]:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Winner ID does not match participants in the match")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                detail="Winner ID does not match participants in the match")
         match_to_update.winner_id = winner_id
     elif score_participant1 is not None and score_participant2 is not None:
         if score_participant1 > score_participant2:
@@ -290,9 +299,9 @@ async def record_match_result(
             # Per ora, non impostiamo un vincitore se c'è pareggio e non è specificato
             pass
 
-    if match_to_update.winner_id: # Se c'è un vincitore (o è stato determinato)
+    if match_to_update.winner_id:  # Se c'è un vincitore (o è stato determinato)
         match_to_update.status = 'completed'
-    elif score_participant1 is not None or score_participant2 is not None: # Se sono stati inseriti punteggi parziali
+    elif score_participant1 is not None or score_participant2 is not None:  # Se sono stati inseriti punteggi parziali
         match_to_update.status = 'in_progress'
 
     tournament.matches[match_index] = match_to_update
@@ -312,7 +321,8 @@ async def get_tournament_bracket(tournament_id: str = Path(..., description="ID 
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found")
     tournament = Tournament(**tournament_dict)
     if tournament.format != "elimination":
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bracket view is for elimination tournaments only.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Bracket view is for elimination tournaments only.")
     return {"tournament_id": tournament.id, "name": tournament.name, "matches": tournament.matches}
 
 
@@ -325,7 +335,8 @@ async def get_tournament_schedule(tournament_id: str = Path(..., description="ID
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found")
     tournament = Tournament(**tournament_dict)
     if tournament.format != "round_robin":
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Schedule view is for round-robin tournaments only.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Schedule view is for round-robin tournaments only.")
     return {"tournament_id": tournament.id, "name": tournament.name, "matches": tournament.matches}
 
 
@@ -337,6 +348,7 @@ async def get_tournament_schedule(tournament_id: str = Path(..., description="ID
 
 if __name__ == "__main__":
     import uvicorn
+
     # Questo è solo per debug facile, non per produzione
     # uvicorn.run(app, host="0.0.0.0", port=8000)
     # Per eseguire con reload dalla root del progetto:
