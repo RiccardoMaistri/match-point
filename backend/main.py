@@ -326,6 +326,11 @@ async def get_tournament_bracket(tournament_id: str = Path(..., description="ID 
     return {"tournament_id": tournament.id, "name": tournament.name, "matches": tournament.matches}
 
 
+@app.get("/")
+def read_root():
+    return {"message": "Backend is running!"}
+
+
 @app.get("/tournaments/{tournament_id}/schedule", summary="Ottieni il calendario (per girone all'italiana)")
 async def get_tournament_schedule(tournament_id: str = Path(..., description="ID del torneo")):
     # Per ora, restituisce semplicemente i match.
@@ -350,7 +355,7 @@ if __name__ == "__main__":
     import uvicorn
 
     # Questo è solo per debug facile, non per produzione
-    # uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8001)
     # Per eseguire con reload dalla root del progetto:
     # uvicorn backend.main:app --reload
     pass
