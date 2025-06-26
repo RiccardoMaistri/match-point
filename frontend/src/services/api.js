@@ -147,4 +147,51 @@ export const getTournamentSchedule = async (tournamentId) => {
 };
 
 
+// --- User Authentication Endpoints ---
+
+export const registerUser = async (userData) => {
+  const response = await fetch(`${API_BASE_URL}/register/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(userData),
+  });
+  return handleResponse(response);
+};
+
+export const loginUser = async (formData) => {
+  // The backend /token endpoint expects form data, not JSON
+  const response = await fetch(`${API_BASE_URL}/token`, {
+    method: 'POST',
+    body: formData, // Pass FormData directly
+  });
+  return handleResponse(response);
+};
+
+export const googleLogin = async (googleLoginData) => {
+  const response = await fetch(`${API_BASE_URL}/google-login/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(googleLoginData),
+  });
+  return handleResponse(response);
+};
+
+export const getCurrentUser = async () => {
+  const token = localStorage.getItem('accessToken');
+  if (!token) {
+    throw new Error('No access token found.');
+  }
+  const response = await fetch(`${API_BASE_URL}/users/me/`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+  return handleResponse(response);
+};
+
+
 export { API_BASE_URL }; // Esporta anche API_BASE_URL se serve altrove direttamente.

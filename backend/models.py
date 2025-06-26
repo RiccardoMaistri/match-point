@@ -39,3 +39,15 @@ class Tournament(BaseModel):
     class Config:
         # Per permettere a FastAPI di gestire i tipi datetime
         from_attributes = True
+
+
+class User(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    email: Optional[str] = None
+    phone_number: Optional[str] = None
+    username: Optional[str] = None
+    google_id: Optional[str] = None
+    password_hash: Optional[str] = None
+
+    class Config:
+        from_attributes = True
