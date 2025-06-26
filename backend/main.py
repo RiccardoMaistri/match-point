@@ -1,11 +1,73 @@
 import uuid
 from typing import List, Optional
 
-from fastapi import Body, FastAPI, HTTPException, Path, status
+from fastapi import Body, FastAPI, HTTPException, Path, status, Depends
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from passlib.context import CryptContext
+import json
+import os
 
 from database import (create_tournament_db, delete_tournament_db, get_all_tournaments_db, get_tournament_db,
                       update_tournament_db)
-from models import Match, Participant, Tournament  # Usiamo i percorsi relativi per i moduli locali
+# Usiamo i percorsi relativi per i moduli locali
+from models import Match, Participant, Tournament, User
+
+# Configuration for password hashing
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# OAuth2 scheme
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+# Database file for users
+USERS_DB_FILE = os.path.join(os.path.dirname(__file__), "jsondata", "users.json")
+
+# Helper functions for user database
+def load_users_db():
+    if not os.path.exists(USERS_DB_FILE):
+        return {}
+    with open(USERS_DB_FILE, "r") as f:
+        return json.load(f)
+
+def save_users_db(users_data):
+    with open(USERS_DB_FILE, "w") as f:
+        json.dump(users_data, f, indent=4)
+
+def get_user_by_email(email: str):
+    users = load_users_db()
+    for user_id, user_data in users.items():
+        if user_data.get("email") == email:
+            return User(**user_data)
+    return None
+
+def get_user_by_username(username: str):
+    users = load_users_db()
+    for user_id, user_data in users.items():
+        if user_data.get("username") == username:
+            return User(**user_data)
+    return None
+
+def get_user_by_google_id(google_id: str):
+    users = load_users_db()
+    for user_id, user_data in users.items():
+        if user_data.get("google_id") == google_id:
+            return User(**user_data)
+    return None
+
+def create_user_db(user_data: dict):
+    users = load_users_db()
+    if user_data["id"] in users:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User already exists")
+    users[user_data["id"]] = user_data
+    save_users_db(users)
+    return user_data
+
+# Password verification
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
+
+# Password hashing
+def get_password_hash(password):
+    return pwd_context.hash(password)
 
 app = FastAPI(
     title="Tournament Manager API",
@@ -351,6 +413,113 @@ async def get_tournament_schedule(tournament_id: str = Path(..., description="ID
 # Assicurati di essere nella directory principale del progetto (non dentro backend/)
 # quando esegui questo comando.
 # Oppure, se sei in backend/: uvicorn main:app --reload --port 8000
+
+
+# --- User Authentication Endpoints ---
+
+@app.post("/register/", response_model=User, status_code=status.HTTP_201_CREATED,
+          summary="Register a new user")
+async def register_user(
+    email: Optional[str] = Body(None),
+    phone_number: Optional[str] = Body(None),
+    username: Optional[str] = Body(None),
+    password: Optional[str] = Body(None),
+    google_id: Optional[str] = Body(None)
+):
+    if not google_id and not (email and password and username):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Either Google ID or email, username, and password must be provided."
+        )
+
+    if google_id:
+        if get_user_by_google_id(google_id):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User with this Google ID already exists."
+            )
+        user_data = User(google_id=google_id, email=email, username=username, phone_number=phone_number).model_dump()
+    else: # email, username, and password registration
+        if not email:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email is required for password-based registration.")
+        if not username:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username is required for password-based registration.")
+        if not password:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Password is required for password-based registration.")
+
+        if get_user_by_email(email):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User with this email already exists."
+            )
+        if get_user_by_username(username):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User with this username already exists."
+            )
+        hashed_password = get_password_hash(password)
+        user_data = User(email=email, phone_number=phone_number, username=username, password_hash=hashed_password).model_dump()
+
+    created_user = create_user_db(user_data)
+    return User(**created_user)
+
+
+@app.post("/token", summary="Login and get access token")
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+    user = get_user_by_username(form_data.username) # form_data.username can be email or username
+    if not user:
+        user = get_user_by_email(form_data.username)
+
+    if not user or not user.password_hash or not verify_password(form_data.password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    # In a real application, you would create and return a JWT token here.
+    # For simplicity, we'll return a dummy token.
+    return {"access_token": user.username, "token_type": "bearer"} # Replace user.username with actual token
+
+
+@app.post("/google-login/", response_model=User, summary="Login/Register with Google ID")
+async def google_login(email: Optional[str] = Body(None), google_id: str = Body(...), username: Optional[str] = Body(None), phone_number: Optional[str] = Body(None)):
+    user = get_user_by_google_id(google_id)
+    if user:
+        return user
+
+    # If user with google_id doesn't exist, create a new one.
+    # Optionally, check if email exists and link accounts, or handle as a conflict.
+    if email and get_user_by_email(email):
+        # This case needs a defined policy: link accounts, error, or prioritize Google ID.
+        # For now, let's assume a new user is created or Google ID is primary.
+        # You might want to update an existing email-based account with the google_id.
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User with this email already exists. Consider linking accounts.")
+
+    if username and get_user_by_username(username):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User with this username already exists.")
+
+
+    user_data = User(google_id=google_id, email=email, username=username, phone_number=phone_number).model_dump()
+    created_user = create_user_db(user_data)
+    return User(**created_user)
+
+
+# Dummy endpoint to get current user (requires token)
+@app.get("/users/me/", response_model=User, summary="Get current user")
+async def read_users_me(token: str = Depends(oauth2_scheme)):
+    # In a real app, you would decode the token to get the user_id/username
+    # For this example, we'll assume the token is the username
+    user = get_user_by_username(token)
+    if not user:
+        user = get_user_by_email(token) # If token could also be an email
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return user
+
 
 if __name__ == "__main__":
     import uvicorn
