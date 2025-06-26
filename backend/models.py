@@ -21,6 +21,7 @@ class Match(BaseModel):
     winner_id: Optional[str] = None
     score_participant1: Optional[int] = None
     score_participant2: Optional[int] = None
+    winner_partecipant:Optional[int] = None
     is_bye: bool = False  # Per i bye nei bracket a eliminazione diretta
     status: Literal['pending', 'in_progress', 'completed', 'cancelled'] = 'pending'
 
