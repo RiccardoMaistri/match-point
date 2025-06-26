@@ -128,3 +128,7 @@ Questa è una web application full-stack per la gestione di tornei sportivi, cos
 - **Test:** Non sono stati scritti test automatici. Per un progetto reale, sarebbero fondamentali.
 
 Grazie per aver utilizzato Tournament Manager!
+
+
+https://stitch.withgoogle.com/projects/10234286867701351773?pli=1
+
