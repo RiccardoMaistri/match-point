@@ -1,12 +1,5 @@
 import React from 'react';
 
-// Esempio di dati fittizi per la visualizzazione iniziale
-const DUMMY_TOURNAMENTS = [
-  { id: '1', name: 'Summer Championship', tournament_type: 'single', format: 'elimination', start_date: '2024-07-01T10:00:00Z' },
-  { id: '2', name: 'Winter League', tournament_type: 'double', format: 'round_robin', start_date: '2024-12-05T18:00:00Z' },
-  { id: '3', name: 'Spring Cup', tournament_type: 'single', format: 'elimination' },
-];
-
 function TournamentList({ tournaments, onEdit, onDelete, onView }) { // Rimossi DUMMY_TOURNAMENTS
   if (!tournaments || tournaments.length === 0) {
     // Questo messaggio ora è gestito in App.js, ma teniamo un fallback

@@ -29,7 +29,7 @@ function App() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [selectedTournament]);
 
   useEffect(() => {
     fetchTournaments();
@@ -39,7 +39,7 @@ function App() {
     setIsLoading(true);
     setError(null);
     try {
-      const newTournament = await api.createTournament(tournamentData);
+      await api.createTournament(tournamentData);
       // setTournaments(prev => [...prev, newTournament]); // Aggiungi subito alla lista
       await fetchTournaments(); // O ricarica la lista per consistenza
       setShowCreateForm(false); // Nascondi il form dopo la creazione
