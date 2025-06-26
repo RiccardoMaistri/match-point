@@ -3,9 +3,9 @@ from typing import List, Optional
 
 from fastapi import Body, FastAPI, HTTPException, Path, status
 
-from .database import (create_tournament_db, delete_tournament_db, get_all_tournaments_db, get_tournament_db,
-                       update_tournament_db)
-from .models import Match, Participant, Tournament  # Usiamo i percorsi relativi per i moduli locali
+from database import (create_tournament_db, delete_tournament_db, get_all_tournaments_db, get_tournament_db,
+                      update_tournament_db)
+from models import Match, Participant, Tournament  # Usiamo i percorsi relativi per i moduli locali
 
 app = FastAPI(
     title="Tournament Manager API",
@@ -45,6 +45,7 @@ async def get_all_tournaments():
     Restituisce una lista di tutti i tornei esistenti.
     """
     tournaments_db = get_all_tournaments_db()
+    print(tournaments_db)
     return [Tournament(**t) for t in tournaments_db]
 
 
