@@ -1,7 +1,6 @@
 import uuid
-from typing import List, Optional
-
 from fastapi import Body, FastAPI, HTTPException, Path, status
+from typing import List, Optional
 
 from database import (create_tournament_db, delete_tournament_db, get_all_tournaments_db, get_tournament_db,
                       update_tournament_db)
@@ -11,6 +10,16 @@ app = FastAPI(
     title="Tournament Manager API",
     description="API per la gestione di tornei sportivi.",
     version="0.1.0"
+)
+
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3002"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
