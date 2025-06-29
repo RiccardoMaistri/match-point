@@ -29,7 +29,15 @@ const handleResponse = async (response) => {
 // --- Tournament Endpoints ---
 
 export const getTournaments = async () => {
-  const response = await fetch(`${API_BASE_URL}/tournaments/`);
+  const token = localStorage.getItem('authToken');
+  const headers = {
+    'Content-Type': 'application/json',
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_BASE_URL}/tournaments/`, { headers });
   return handleResponse(response);
 };
 
@@ -145,6 +153,37 @@ export const getTournamentSchedule = async (tournamentId) => {
     const response = await fetch(`${API_BASE_URL}/tournaments/${tournamentId}/schedule`);
     return handleResponse(response);
 };
+
+// --- Auth Endpoints ---
+
+export const registerUser = async (userData) => {
+  // userData: { email, password }
+  const response = await fetch(`${API_BASE_URL}/users/register`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(userData),
+  });
+  return handleResponse(response); // Expects User object without password
+};
+
+export const loginUser = async (email, password) => {
+  const formData = new URLSearchParams();
+  formData.append('username', email); // FastAPI's OAuth2PasswordRequestForm expects 'username'
+  formData.append('password', password);
+
+  const response = await fetch(`${API_BASE_URL}/token`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: formData.toString(),
+  });
+  return handleResponse(response); // Expects { access_token, token_type }
+};
+
+// TODO: Add function to get current user details (e.g., /users/me) if needed
 
 
 export { API_BASE_URL }; // Esporta anche API_BASE_URL se serve altrove direttamente.
