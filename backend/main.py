@@ -1,44 +1,30 @@
-import uuid
 from fastapi import Body, FastAPI, HTTPException, Path, status
+import uuid  # For generating invitation links and possibly other IDs if needed
+from authlib.integrations.starlette_client import OAuth
+from datetime import timedelta
+from fastapi import Body, Depends, FastAPI, HTTPException, Path, Request, \
+    status  # To use Depends for get_current_active_user; For Google OAuth
+from fastapi.responses import RedirectResponse  # For Google OAuth
+from fastapi.security import OAuth2PasswordRequestForm
 from typing import List, Optional
 
-from database import (create_tournament_db, delete_tournament_db, get_all_tournaments_db, get_tournament_db,
-                      update_tournament_db)
-# We will add user related db functions later
-from models import Match, Participant, Tournament, User, UserCreate, TournamentCreate # Import User and UserCreate model
 # Import auth related things
-from auth import (
-    SECRET_KEY as AUTH_SECRET_KEY, # Rename to avoid clash if main.py has its own SECRET_KEY
-    ALGORITHM as AUTH_ALGORITHM,
-    ACCESS_TOKEN_EXPIRE_MINUTES as AUTH_ACCESS_TOKEN_EXPIRE_MINUTES,
-    GOOGLE_CLIENT_ID as AUTH_GOOGLE_CLIENT_ID,
-    GOOGLE_CLIENT_SECRET as AUTH_GOOGLE_CLIENT_SECRET,
-    GOOGLE_REDIRECT_URI as AUTH_GOOGLE_REDIRECT_URI,
-    # oauth2_scheme, # We might define this in main or use from auth
-    # create_access_token,
-    oauth2_scheme, # We might define this in main or use from auth
-    create_access_token,
-    get_current_active_user, # For protecting routes
-    get_optional_current_active_user, # For optional user on public routes
-    Token, # Make sure Token model is imported from auth
-    verify_password, # For password flow
-    get_password_hash # For user creation later
-)
-from fastapi.security import OAuth2PasswordRequestForm
-from fastapi import Depends # To use Depends for get_current_active_user
-from datetime import timedelta
-from fastapi import Request # For Google OAuth
-from fastapi.responses import RedirectResponse, HTMLResponse # For Google OAuth
-import uuid # For generating invitation links and possibly other IDs if needed
-
-from authlib.integrations.starlette_client import OAuth
+from auth import (ACCESS_TOKEN_EXPIRE_MINUTES as AUTH_ACCESS_TOKEN_EXPIRE_MINUTES, ALGORITHM as AUTH_ALGORITHM,
+                  GOOGLE_CLIENT_ID as AUTH_GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET as AUTH_GOOGLE_CLIENT_SECRET,
+                  GOOGLE_REDIRECT_URI as AUTH_GOOGLE_REDIRECT_URI, SECRET_KEY as AUTH_SECRET_KEY, Token,
+                  create_access_token, get_current_active_user, get_optional_current_active_user, get_password_hash,
+                  verify_password)  # Rename to avoid clash if main.py has its own SECRET_KEY; oauth2_scheme, # We might define this in main or use from auth; create_access_token,; We might define this in main or use from auth; For protecting routes; For optional user on public routes; Make sure Token model is imported from auth; For password flow; For user creation later
 # Placeholder for database user functions - will be replaced by actual db calls
-from database import get_user_by_email_db, create_user_db, update_user_db # This function needs to be created in database.py
-
+from database import create_tournament_db, create_user_db, delete_tournament_db, get_all_tournaments_db, \
+    get_tournament_db, get_user_by_email_db, update_tournament_db, \
+    update_user_db  # This function needs to be created in database.py
+# We will add user related db functions later
+from models import Match, Participant, Tournament, TournamentCreate, User, \
+    UserCreate  # Import User and UserCreate model
 
 # --- Authentication Settings ---
 # These would ideally come from environment variables or a config file
-SECRET_KEY = AUTH_SECRET_KEY # Use the one from auth.py for now or define a new one
+SECRET_KEY = AUTH_SECRET_KEY  # Use the one from auth.py for now or define a new one
 ALGORITHM = AUTH_ALGORITHM
 ACCESS_TOKEN_EXPIRE_MINUTES = AUTH_ACCESS_TOKEN_EXPIRE_MINUTES
 
@@ -57,7 +43,7 @@ oauth.register(
     server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
     client_kwargs={
         'scope': 'openid email profile',
-        'redirect_url': GOOGLE_REDIRECT_URI # Ensure this is registered in Google Cloud Console
+        'redirect_url': GOOGLE_REDIRECT_URI  # Ensure this is registered in Google Cloud Console
     }
 )
 
@@ -83,8 +69,8 @@ app.add_middleware(
 @app.post("/tournaments/", response_model=Tournament, status_code=status.HTTP_201_CREATED,
           summary="Crea un nuovo torneo")
 async def create_tournament(
-    tournament_payload: TournamentCreate, # Use TournamentCreate for request body
-    current_user: User = Depends(get_current_active_user)
+        tournament_payload: TournamentCreate,  # Use TournamentCreate for request body
+        current_user: User = Depends(get_current_active_user)
 ):
     """
     Crea un nuovo torneo con i dati forniti. Richiede autenticazione.
@@ -104,7 +90,7 @@ async def create_tournament(
 
     # Generate invitation link if not provided
     if not new_tournament_data.invitation_link:
-        new_tournament_data.invitation_link = f"/join/{uuid.uuid4()}" # uuid needs to be imported
+        new_tournament_data.invitation_link = f"/join/{uuid.uuid4()}"  # uuid needs to be imported
 
     # Save to database
     created_tournament_dict = create_tournament_db(new_tournament_data.model_dump())
@@ -126,11 +112,11 @@ async def get_all_tournaments(current_user: Optional[User] = Depends(get_optiona
         user_email = current_user.email
         user_tournaments = []
         for t_dict in all_tournaments_db:
-            tournament = Tournament(**t_dict) # Validate and work with model instances
+            tournament = Tournament(**t_dict)  # Validate and work with model instances
             for participant in tournament.participants:
                 if participant.email == user_email:
                     user_tournaments.append(tournament)
-                    break # Found user in this tournament, move to next tournament
+                    break  # Found user in this tournament, move to next tournament
         return user_tournaments
     else:
         # No user logged in or user has no email (should not happen for active users)
@@ -149,10 +135,11 @@ async def get_tournament(tournament_id: str = Path(..., description="ID del torn
     return Tournament(**tournament_db)
 
 
-@app.put("/tournaments/{tournament_id}", response_model=Tournament, summary="Aggiorna un torneo esistente")
+@app.put("/tournaments/{tournament_id}", response_model=Tournament, status_code=status.HTTP_200_OK,
+         summary="Aggiorna un torneo esistente")
 async def update_tournament(
         tournament_id: str = Path(..., description="ID del torneo da aggiornare"),
-        tournament_update_payload: TournamentCreate, # Use TournamentCreate, user_id will be handled
+        tournament_update_payload: TournamentCreate = Body(..., description="Dati aggiornati del torneo"),
         current_user: User = Depends(get_current_active_user)
 ):
     """
@@ -173,21 +160,20 @@ async def update_tournament(
     # Preserve existing id, user_id, participants, matches
     updated_tournament_data = Tournament(
         id=existing_tournament.id,
-        user_id=current_user.id, # Owner doesn't change
+        user_id=current_user.id,  # Owner doesn't change
         name=tournament_update_payload.name,
         tournament_type=tournament_update_payload.tournament_type,
         format=tournament_update_payload.format,
         start_date=tournament_update_payload.start_date,
         registration_open=tournament_update_payload.registration_open,
         invitation_link=tournament_update_payload.invitation_link if tournament_update_payload.invitation_link else existing_tournament.invitation_link,
-        participants=existing_tournament.participants, # Participants are managed by separate endpoints
-        matches=existing_tournament.matches # Matches are managed by separate endpoints
+        participants=existing_tournament.participants,  # Participants are managed by separate endpoints
+        matches=existing_tournament.matches  # Matches are managed by separate endpoints
     )
 
     # Generate new invitation link if not provided and was missing, or if explicitly cleared
     if not updated_tournament_data.invitation_link:
-         updated_tournament_data.invitation_link = f"/join/{uuid.uuid4()}"
-
+        updated_tournament_data.invitation_link = f"/join/{uuid.uuid4()}"
 
     tournament_db = update_tournament_db(tournament_id, updated_tournament_data.model_dump())
     if not tournament_db:
@@ -199,8 +185,8 @@ async def update_tournament(
 
 @app.delete("/tournaments/{tournament_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Elimina un torneo")
 async def delete_tournament(
-    tournament_id: str = Path(..., description="ID del torneo da eliminare"),
-    current_user: User = Depends(get_current_active_user)
+        tournament_id: str = Path(..., description="ID del torneo da eliminare"),
+        current_user: User = Depends(get_current_active_user)
 ):
     """
     Elimina un torneo specifico. Richiede autenticazione.
@@ -215,7 +201,8 @@ async def delete_tournament(
 
     if not delete_tournament_db(tournament_id):
         # This case should not be reached if previous checks passed
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to delete tournament from database")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail="Failed to delete tournament from database")
 
     return  # No content response
 
@@ -483,12 +470,12 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     OAuth2 compatible token endpoint.
     Takes email (as username) and password. Returns an access token.
     """
-    user_dict = get_user_by_email_db(form_data.username) # form_data.username is the email
+    user_dict = get_user_by_email_db(form_data.username)  # form_data.username is the email
 
     if not user_dict:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password", # Keep it generic
+            detail="Incorrect email or password",  # Keep it generic
             headers={"WWW-Authenticate": "Bearer"},
         )
 
@@ -507,7 +494,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     if not verify_password(form_data.password, user_in_db.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password", # Keep it generic
+            detail="Incorrect email or password",  # Keep it generic
             headers={"WWW-Authenticate": "Bearer"},
         )
 
@@ -543,7 +530,7 @@ async def login_google(request: Request):
     # OAuth 2.0 client's Authorized redirect URIs in Google Cloud Console.
     # This is taken from the oauth.register client_kwargs or can be overridden here.
     # Ensure it's the same as GOOGLE_REDIRECT_URI.
-    redirect_uri = GOOGLE_REDIRECT_URI # Or request.url_for('auth_google') if you name the route
+    redirect_uri = GOOGLE_REDIRECT_URI  # Or request.url_for('auth_google') if you name the route
     return await oauth.google.authorize_redirect(request, redirect_uri)
 
 
@@ -562,14 +549,15 @@ async def auth_google(request: Request):
         token = await oauth.google.authorize_access_token(request)
     except Exception as e:
         # Log the error e
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Could not authorize Google token: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail=f"Could not authorize Google token: {str(e)}")
 
     user_info_from_google = token.get('userinfo')
     if not user_info_from_google:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Could not fetch user info from Google")
 
     google_email = user_info_from_google.get('email')
-    google_id = user_info_from_google.get('sub') # 'sub' is the standard subject identifier
+    google_id = user_info_from_google.get('sub')  # 'sub' is the standard subject identifier
 
     if not google_email:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email not provided by Google")
@@ -598,13 +586,14 @@ async def auth_google(request: Request):
             # This logic will be refined in step 8.
             # For now: (REPLACED WITH update_user_db)
             update_data = {"google_id": google_id}
-            if not user.id: # Should not happen if user was created properly
-                 update_data["id"] = str(uuid.uuid4()) # Assign a new ID if missing
+            if not user.id:  # Should not happen if user was created properly
+                update_data["id"] = str(uuid.uuid4())  # Assign a new ID if missing
 
             updated_user_dict = update_user_db(user.id, update_data)
             if not updated_user_dict:
-                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Could not update user with Google ID.")
-            user = User(**updated_user_dict) # Re-fetch/re-init to get the updated User model
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                                    detail="Could not update user with Google ID.")
+            user = User(**updated_user_dict)  # Re-fetch/re-init to get the updated User model
 
     else:
         # User does not exist, create a new one
@@ -619,7 +608,8 @@ async def auth_google(request: Request):
         user = User(**created_user_dict)
 
     if not user or not user.is_active:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User is inactive or could not be processed")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="User is inactive or could not be processed")
 
     # Generate JWT token for our application
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -630,7 +620,7 @@ async def auth_google(request: Request):
     # For SPAs, redirecting with the token in a query parameter is common.
     # The frontend then extracts it and stores it.
     # IMPORTANT: Ensure your frontend URL is correct.
-    frontend_url = "http://localhost:3000" # Configure this appropriately
+    frontend_url = "http://localhost:3000"  # Configure this appropriately
     redirect_url_with_token = f"{frontend_url}/auth/callback?token={app_access_token}&token_type=bearer"
 
     # Alternatively, render an HTML page that posts the token to the parent window (more secure than query params for history)
@@ -676,7 +666,7 @@ async def register_user(user_in: UserCreate):
     new_user_data = User(
         email=user_in.email,
         hashed_password=hashed_password,
-        is_active=True # Users are active by default upon registration
+        is_active=True  # Users are active by default upon registration
         # name=user_in.name # If you added 'name' to User model and want to store it
     )
 
