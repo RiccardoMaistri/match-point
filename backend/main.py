@@ -109,15 +109,22 @@ async def get_all_tournaments(current_user: Optional[User] = Depends(get_optiona
     all_tournaments_db = get_all_tournaments_db()
 
     if current_user and current_user.email:
-        user_email = current_user.email
-        user_tournaments = []
+        user_tournaments_dict = {} # Use a dict to avoid duplicates by tournament ID
         for t_dict in all_tournaments_db:
             tournament = Tournament(**t_dict)  # Validate and work with model instances
+
+            # Check if current user is the admin/creator
+            if tournament.user_id == current_user.id:
+                user_tournaments_dict[tournament.id] = tournament
+                continue # Already added, no need to check participants for this tournament
+
+            # If not admin, check if current user is a participant
             for participant in tournament.participants:
-                if participant.email == user_email:
-                    user_tournaments.append(tournament)
+                if participant.email == current_user.email:
+                    user_tournaments_dict[tournament.id] = tournament
                     break  # Found user in this tournament, move to next tournament
-        return user_tournaments
+
+        return list(user_tournaments_dict.values())
     else:
         # No user logged in or user has no email (should not happen for active users)
         # Return all tournaments
