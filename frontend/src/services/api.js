@@ -26,14 +26,43 @@ const handleResponse = async (response) => {
   return response.json();
 };
 
-// --- Tournament Endpoints ---
+/**
+ * Helper function to make authenticated API requests.
+ * @param {string} url - The full URL for the API endpoint.
+ * @param {string} method - The HTTP method (GET, POST, PUT, DELETE).
+ * @param {object} [body] - The request body for POST/PUT requests.
+ * @returns {Promise<any>} - The JSON response.
+ */
+const authenticatedFetch = async (url, method, body) => {
+  const token = localStorage.getItem('authToken');
+  const headers = {
+    'Content-Type': 'application/json',
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
 
-export const getTournaments = async () => {
-  const response = await fetch(`${API_BASE_URL}/tournaments/`);
+  const config = {
+    method,
+    headers,
+  };
+
+  if (body) {
+    config.body = JSON.stringify(body);
+  }
+
+  const response = await fetch(url, config);
   return handleResponse(response);
 };
 
+// --- Tournament Endpoints ---
+
+export const getTournaments = async () => {
+  return authenticatedFetch(`${API_BASE_URL}/tournaments/`, 'GET');
+};
+
 export const getTournamentById = async (tournamentId) => {
+  // This might remain public, or use authenticatedFetch if details are protected
   const response = await fetch(`${API_BASE_URL}/tournaments/${tournamentId}`);
   return handleResponse(response);
 };
@@ -44,107 +73,94 @@ export const createTournament = async (tournamentData) => {
   const payload = { ...tournamentData };
   if (!payload.start_date) delete payload.start_date; // Rimuovi se vuoto/nullo
 
-  const response = await fetch(`${API_BASE_URL}/tournaments/`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
-  });
-  return handleResponse(response);
+  return authenticatedFetch(`${API_BASE_URL}/tournaments/`, 'POST', payload);
 };
 
 export const updateTournament = async (tournamentId, tournamentData) => {
   const payload = { ...tournamentData };
   if (!payload.start_date) delete payload.start_date;
 
-  const response = await fetch(`${API_BASE_URL}/tournaments/${tournamentId}`, {
-    method: 'PUT', // o PATCH se il backend lo supporta per aggiornamenti parziali
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
-  });
-  return handleResponse(response);
+  return authenticatedFetch(`${API_BASE_URL}/tournaments/${tournamentId}`, 'PUT', payload);
 };
 
 export const deleteTournament = async (tournamentId) => {
-  const response = await fetch(`${API_BASE_URL}/tournaments/${tournamentId}`, {
-    method: 'DELETE',
-  });
-  // DELETE spesso restituisce 204 No Content, gestito da handleResponse
-  return handleResponse(response);
+  return authenticatedFetch(`${API_BASE_URL}/tournaments/${tournamentId}`, 'DELETE');
 };
 
 // --- Participant Endpoints ---
+// Assuming these require authentication for modification or viewing specific user's participant data
 
 export const addParticipantToTournament = async (tournamentId, participantData) => {
-  const response = await fetch(`${API_BASE_URL}/tournaments/${tournamentId}/participants/`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(participantData),
-  });
-  return handleResponse(response);
+  return authenticatedFetch(`${API_BASE_URL}/tournaments/${tournamentId}/participants/`, 'POST', participantData);
 };
 
 export const getTournamentParticipants = async (tournamentId) => {
-  const response = await fetch(`${API_BASE_URL}/tournaments/${tournamentId}/participants/`);
-  return handleResponse(response);
+  // This could be public or require auth depending on app logic. Assuming auth for now.
+  return authenticatedFetch(`${API_BASE_URL}/tournaments/${tournamentId}/participants/`, 'GET');
 };
 
 export const removeParticipantFromTournament = async (tournamentId, participantId) => {
-  const response = await fetch(`${API_BASE_URL}/tournaments/${tournamentId}/participants/${participantId}`, {
-    method: 'DELETE',
-  });
-  return handleResponse(response);
+  return authenticatedFetch(`${API_BASE_URL}/tournaments/${tournamentId}/participants/${participantId}`, 'DELETE');
 };
 
 // --- Match & Results Endpoints ---
+// Assuming these actions require authentication
 
 export const generateMatches = async (tournamentId) => {
-  const response = await fetch(`${API_BASE_URL}/tournaments/${tournamentId}/matches/generate`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json', // Anche se non c'è body, buona pratica
-    },
-  });
-  return handleResponse(response);
+  return authenticatedFetch(`${API_BASE_URL}/tournaments/${tournamentId}/matches/generate`, 'POST');
 };
 
 export const getTournamentMatches = async (tournamentId) => {
-  // Potrebbe essere /bracket o /schedule a seconda del tipo di torneo,
-  // o un endpoint generico /matches come definito nel backend.
-  // Per ora usiamo /matches come da API backend.
-  const response = await fetch(`${API_BASE_URL}/tournaments/${tournamentId}/matches`);
-  return handleResponse(response);
+  // Assuming viewing matches might require login, or to see user-specific context
+  return authenticatedFetch(`${API_BASE_URL}/tournaments/${tournamentId}/matches`, 'GET');
 };
 
 export const recordMatchResult = async (tournamentId, matchId, resultData) => {
-  // resultData potrebbe essere: { score_participant1, score_participant2, winner_id }
-  const response = await fetch(`${API_BASE_URL}/tournaments/${tournamentId}/matches/${matchId}/result`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(resultData),
-  });
-  return handleResponse(response);
+  return authenticatedFetch(`${API_BASE_URL}/tournaments/${tournamentId}/matches/${matchId}/result`, 'POST', resultData);
 };
 
 
 // --- Specific view endpoints (Bracket/Schedule) ---
+// Assuming these might require authentication
 
 export const getTournamentBracket = async (tournamentId) => {
-    const response = await fetch(`${API_BASE_URL}/tournaments/${tournamentId}/bracket`);
-    return handleResponse(response);
+    return authenticatedFetch(`${API_BASE_URL}/tournaments/${tournamentId}/bracket`, 'GET');
 };
 
 export const getTournamentSchedule = async (tournamentId) => {
-    const response = await fetch(`${API_BASE_URL}/tournaments/${tournamentId}/schedule`);
-    return handleResponse(response);
+    return authenticatedFetch(`${API_BASE_URL}/tournaments/${tournamentId}/schedule`, 'GET');
 };
+
+// --- Auth Endpoints ---
+
+export const registerUser = async (userData) => {
+  // userData: { email, password }
+  const response = await fetch(`${API_BASE_URL}/users/register`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(userData),
+  });
+  return handleResponse(response); // Expects User object without password
+};
+
+export const loginUser = async (email, password) => {
+  const formData = new URLSearchParams();
+  formData.append('username', email); // FastAPI's OAuth2PasswordRequestForm expects 'username'
+  formData.append('password', password);
+
+  const response = await fetch(`${API_BASE_URL}/token`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: formData.toString(),
+  });
+  return handleResponse(response); // Expects { access_token, token_type }
+};
+
+// TODO: Add function to get current user details (e.g., /users/me) if needed
 
 
 export { API_BASE_URL }; // Esporta anche API_BASE_URL se serve altrove direttamente.

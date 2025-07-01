@@ -1,3 +1,8 @@
 fastapi
 uvicorn
 pydantic
+httpx
+Authlib
+passlib[bcrypt]
+python-jose[cryptography]
+email-validator
