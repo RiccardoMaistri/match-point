@@ -21,6 +21,7 @@ function App() {
   const [currentUser, setCurrentUser] = useState(null); // Store user info (or token)
   const [authError, setAuthError] = useState(null);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true); // New state for initial load
   // --- End Authentication State ---
 
   // Simple router based on pathname
@@ -51,6 +52,7 @@ function App() {
       // For now, just assume token means logged in
       setCurrentUser({ token }); // Replace with actual user object later
     }
+    setIsInitializing(false); // Set initializing to false after token check
   }, []);
 
   const handleLogin = async (email, password) => {
@@ -61,7 +63,7 @@ function App() {
       localStorage.setItem('authToken', data.access_token);
       // TODO: Fetch user details from a /users/me endpoint or decode token
       setCurrentUser({ token: data.access_token, email }); // Placeholder
-      window.location.href = '/'; // Redirect to home
+      window.location.href = '/tournaments'; // Redirect to tournaments
     } catch (err) {
       setAuthError(err.message || 'Failed to login');
       setCurrentUser(null);
@@ -217,7 +219,12 @@ function App() {
       return <RegisterPage onRegister={handleRegister} error={authError} isLoading={isAuthLoading} />;
     }
 
-    // If not an auth route, proceed with tournament content
+    // If still initializing, show a loading message or spinner
+    if (isInitializing) {
+      return <p className="text-center py-10">Initializing app...</p>;
+    }
+
+    // If not an auth route, and not initializing, proceed with tournament content
     if (!currentUser && route !== '/login' && route !== '/register' && !route.startsWith('/auth/callback')) {
       // If trying to access a protected route without being logged in,
       // and it's not an auth page itself, redirect to login.
