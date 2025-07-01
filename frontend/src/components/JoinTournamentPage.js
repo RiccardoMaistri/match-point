@@ -32,7 +32,7 @@ function JoinTournamentPage({ currentUser, globalSetError, globalSetIsLoading, g
     fetchTournamentByInvite();
   }, [fetchTournamentByInvite]);
 
-  const handleJoinTournament = async () => {
+  const handleJoinTournament = useCallback(async () => {
     if (!tournament || !tournament.id) {
       globalSetError("Tournament details are not loaded.");
       return;
@@ -62,7 +62,7 @@ function JoinTournamentPage({ currentUser, globalSetError, globalSetIsLoading, g
     } finally {
       setIsJoining(false);
     }
-  };
+  }, [tournament, currentUser, inviteCode, onLoginRequired, globalSetError, setJoinMessage, setIsJoining, navigate]);
 
   // Effect to handle post-login action
   useEffect(() => {
@@ -97,7 +97,7 @@ function JoinTournamentPage({ currentUser, globalSetError, globalSetIsLoading, g
         }
       }
     }
-  }, [currentUser, inviteCode, tournament, fetchTournamentByInvite, globalSetError, navigate]);
+  }, [currentUser, inviteCode, tournament, fetchTournamentByInvite, globalSetError, navigate, handleJoinTournament]);
 
 
   if (globalIsLoading && !tournament) {
