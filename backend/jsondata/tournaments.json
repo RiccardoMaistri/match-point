@@ -1,1 +1,14 @@
-[]
+[
+    {
+        "id": "dfd1c61a-27a7-4209-80b3-d33421eb1f97",
+        "user_id": "2c1a4ed6-be95-4e7b-a84a-750d84db9bc1",
+        "name": "test",
+        "tournament_type": "single",
+        "format": "elimination",
+        "start_date": null,
+        "participants": [],
+        "matches": [],
+        "registration_open": true,
+        "invitation_link": "/join/457e01fe-3cb0-4fb4-bc03-b07d90aa6180"
+    }
+]
