@@ -1,10 +1,50 @@
-import uuid
-from fastapi import Body, FastAPI, HTTPException, Path, status
+import uuid  # For generating invitation links and possibly other IDs if needed
+from authlib.integrations.starlette_client import OAuth
+from datetime import timedelta
+from fastapi import Body, Depends, FastAPI, HTTPException, Path, Request, \
+    status  # To use Depends for get_current_active_user; For Google OAuth
+from fastapi.responses import RedirectResponse  # For Google OAuth
+from fastapi.security import OAuth2PasswordRequestForm
 from typing import List, Optional
 
-from database import (create_tournament_db, delete_tournament_db, get_all_tournaments_db, get_tournament_db,
-                      update_tournament_db)
-from models import Match, Participant, Tournament  # Usiamo i percorsi relativi per i moduli locali
+# Import auth related things
+from auth import (ACCESS_TOKEN_EXPIRE_MINUTES as AUTH_ACCESS_TOKEN_EXPIRE_MINUTES, ALGORITHM as AUTH_ALGORITHM,
+                  GOOGLE_CLIENT_ID as AUTH_GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET as AUTH_GOOGLE_CLIENT_SECRET,
+                  GOOGLE_REDIRECT_URI as AUTH_GOOGLE_REDIRECT_URI, SECRET_KEY as AUTH_SECRET_KEY, Token,
+                  create_access_token, get_current_active_user, get_optional_current_active_user, get_password_hash,
+                  verify_password)  # Rename to avoid clash if main.py has its own SECRET_KEY; oauth2_scheme, # We might define this in main or use from auth; create_access_token,; We might define this in main or use from auth; For protecting routes; For optional user on public routes; Make sure Token model is imported from auth; For password flow; For user creation later
+# Placeholder for database user functions - will be replaced by actual db calls
+from database import create_tournament_db, create_user_db, delete_tournament_db, get_all_tournaments_db, \
+    get_tournament_db, get_user_by_email_db, update_tournament_db, \
+    update_user_db  # This function needs to be created in database.py
+# We will add user related db functions later
+from models import Match, Participant, Tournament, TournamentCreate, User, \
+    UserCreate  # Import User and UserCreate model
+
+# --- Authentication Settings ---
+# These would ideally come from environment variables or a config file
+SECRET_KEY = AUTH_SECRET_KEY  # Use the one from auth.py for now or define a new one
+ALGORITHM = AUTH_ALGORITHM
+ACCESS_TOKEN_EXPIRE_MINUTES = AUTH_ACCESS_TOKEN_EXPIRE_MINUTES
+
+# Google OAuth settings (ensure these are correctly set in auth.py or here)
+GOOGLE_CLIENT_ID = AUTH_GOOGLE_CLIENT_ID
+GOOGLE_CLIENT_SECRET = AUTH_GOOGLE_CLIENT_SECRET
+GOOGLE_REDIRECT_URI = AUTH_GOOGLE_REDIRECT_URI
+# --- End Authentication Settings ---
+
+# Initialize OAuth client (for Google Login)
+oauth = OAuth()
+oauth.register(
+    name='google',
+    client_id=GOOGLE_CLIENT_ID,
+    client_secret=GOOGLE_CLIENT_SECRET,
+    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+    client_kwargs={
+        'scope': 'openid email profile',
+        'redirect_url': GOOGLE_REDIRECT_URI  # Ensure this is registered in Google Cloud Console
+    }
+)
 
 app = FastAPI(
     title="Tournament Manager API",
@@ -27,35 +67,67 @@ app.add_middleware(
 
 @app.post("/tournaments/", response_model=Tournament, status_code=status.HTTP_201_CREATED,
           summary="Crea un nuovo torneo")
-async def create_tournament(tournament_data: Tournament = Body(...)):
+async def create_tournament(
+        tournament_payload: TournamentCreate,  # Use TournamentCreate for request body
+        current_user: User = Depends(get_current_active_user)
+):
     """
-    Crea un nuovo torneo con i dati forniti.
+    Crea un nuovo torneo con i dati forniti. Richiede autenticazione.
+    L'ID dell'utente autenticato verrà associato al torneo.
     - **name**: Nome del torneo (richiesto)
     - **tournament_type**: 'single' o 'double' (richiesto)
     - **format**: 'elimination' o 'round_robin' (richiesto)
     - **start_date**: Data di inizio (opzionale)
     """
-    # Il modello Tournament già assegna un ID di default e una lista vuota di partecipanti/match
-    # Potremmo voler generare qui l'invitation_link se non fornito
-    if not tournament_data.invitation_link:
-        # Genera un link univoco più robusto
-        tournament_data.invitation_link = f"/join/{uuid.uuid4()}"
 
-    # Salva l'intero modello, Pydantic si occupa dei default
-    tournament_dict = tournament_data.model_dump()
-    created_tournament = create_tournament_db(tournament_dict)
-    # Riconverti da dict a modello Pydantic per la risposta, assicurando la validazione
-    return Tournament(**created_tournament)
+    # Construct the full Tournament object, including the user_id from the authenticated user
+    # and default values for id, participants, matches from the Tournament model itself.
+    new_tournament_data = Tournament(
+        **tournament_payload.model_dump(),
+        user_id=current_user.id
+    )
+
+    # Generate invitation link if not provided
+    if not new_tournament_data.invitation_link:
+        new_tournament_data.invitation_link = f"/join/{uuid.uuid4()}"  # uuid needs to be imported
+
+    # Save to database
+    created_tournament_dict = create_tournament_db(new_tournament_data.model_dump())
+
+    # Return the created tournament, Pydantic will validate against Tournament model
+    return Tournament(**created_tournament_dict)
 
 
 @app.get("/tournaments/", response_model=List[Tournament], summary="Ottieni tutti i tornei")
-async def get_all_tournaments():
+async def get_all_tournaments(current_user: Optional[User] = Depends(get_optional_current_active_user)):
     """
     Restituisce una lista di tutti i tornei esistenti.
+    Se l'utente è autenticato, restituisce solo i tornei a cui partecipa (basato sull'email del partecipante).
+    Altrimenti, restituisce tutti i tornei.
     """
-    tournaments_db = get_all_tournaments_db()
-    print(tournaments_db)
-    return [Tournament(**t) for t in tournaments_db]
+    all_tournaments_db = get_all_tournaments_db()
+
+    if current_user and current_user.email:
+        user_tournaments_dict = {}  # Use a dict to avoid duplicates by tournament ID
+        for t_dict in all_tournaments_db:
+            tournament = Tournament(**t_dict)  # Validate and work with model instances
+
+            # Check if current user is the admin/creator
+            if tournament.user_id == current_user.id:
+                user_tournaments_dict[tournament.id] = tournament
+                continue  # Already added, no need to check participants for this tournament
+
+            # If not admin, check if current user is a participant
+            for participant in tournament.participants:
+                if participant.email == current_user.email:
+                    user_tournaments_dict[tournament.id] = tournament
+                    break  # Found user in this tournament, move to next tournament
+
+        return list(user_tournaments_dict.values())
+    else:
+        # No user logged in or user has no email (should not happen for active users)
+        # Return all tournaments
+        return [Tournament(**t) for t in all_tournaments_db]
 
 
 @app.get("/tournaments/{tournament_id}", response_model=Tournament, summary="Ottieni un torneo specifico")
@@ -69,41 +141,75 @@ async def get_tournament(tournament_id: str = Path(..., description="ID del torn
     return Tournament(**tournament_db)
 
 
-@app.put("/tournaments/{tournament_id}", response_model=Tournament, summary="Aggiorna un torneo esistente")
+@app.put("/tournaments/{tournament_id}", response_model=Tournament, status_code=status.HTTP_200_OK,
+         summary="Aggiorna un torneo esistente")
 async def update_tournament(
         tournament_id: str = Path(..., description="ID del torneo da aggiornare"),
-        tournament_update: Tournament = Body(...)  # Qui potremmo usare un modello diverso per l'update parziale
+        tournament_update_payload: TournamentCreate = Body(..., description="Dati aggiornati del torneo"),
+        current_user: User = Depends(get_current_active_user)
 ):
     """
-    Aggiorna i dettagli di un torneo esistente.
-    *Nota: Attualmente richiede l'intero oggetto torneo per l'aggiornamento.*
-    *Future versioni potrebbero supportare aggiornamenti parziali (PATCH).*
+    Aggiorna i dettagli di un torneo esistente. Richiede autenticazione.
+    L'utente deve essere il proprietario del torneo.
+    *Nota: Attualmente richiede l'intero oggetto torneo per l'aggiornamento (escluso user_id, id).*
     """
-    # Per un vero PUT, ci si aspetta che l'intero stato della risorsa venga sostituito.
-    # Se l'ID nel body non corrisponde a quello nel path, è un errore.
-    if tournament_update.id != tournament_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Tournament ID in path does not match ID in body."
-        )
+    existing_tournament_dict = get_tournament_db(tournament_id)
+    if not existing_tournament_dict:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found")
 
-    # Per PUT, l'intero modello viene sostituito.
-    # Se un campo non è nel payload, Pydantic userà il suo default se esiste,
-    # o lo lascerà non impostato se Optional.
-    updated_tournament_data = tournament_update.model_dump()
-    tournament_db = update_tournament_db(tournament_id, updated_tournament_data)
+    existing_tournament = Tournament(**existing_tournament_dict)
+
+    if existing_tournament.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to update this tournament")
+
+    # Construct the full updated Tournament object
+    # Preserve existing id, user_id, participants, matches
+    updated_tournament_data = Tournament(
+        id=existing_tournament.id,
+        user_id=current_user.id,  # Owner doesn't change
+        name=tournament_update_payload.name,
+        tournament_type=tournament_update_payload.tournament_type,
+        format=tournament_update_payload.format,
+        start_date=tournament_update_payload.start_date,
+        registration_open=tournament_update_payload.registration_open,
+        invitation_link=tournament_update_payload.invitation_link if tournament_update_payload.invitation_link else existing_tournament.invitation_link,
+        participants=existing_tournament.participants,  # Participants are managed by separate endpoints
+        matches=existing_tournament.matches  # Matches are managed by separate endpoints
+    )
+
+    # Generate new invitation link if not provided and was missing, or if explicitly cleared
+    if not updated_tournament_data.invitation_link:
+        updated_tournament_data.invitation_link = f"/join/{uuid.uuid4()}"
+
+    tournament_db = update_tournament_db(tournament_id, updated_tournament_data.model_dump())
     if not tournament_db:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found for update")
+        # This case should ideally not be reached if the initial get_tournament_db succeeded
+        # and update_tournament_db correctly finds the tournament by ID.
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found during update process")
     return Tournament(**tournament_db)
 
 
 @app.delete("/tournaments/{tournament_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Elimina un torneo")
-async def delete_tournament(tournament_id: str = Path(..., description="ID del torneo da eliminare")):
+async def delete_tournament(
+        tournament_id: str = Path(..., description="ID del torneo da eliminare"),
+        current_user: User = Depends(get_current_active_user)
+):
     """
-    Elimina un torneo specifico.
+    Elimina un torneo specifico. Richiede autenticazione.
+    L'utente deve essere il proprietario del torneo.
     """
+    tournament_to_delete = get_tournament_db(tournament_id)
+    if not tournament_to_delete:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found")
+
+    if tournament_to_delete.get("user_id") != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to delete this tournament")
+
     if not delete_tournament_db(tournament_id):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found for deletion")
+        # This case should not be reached if previous checks passed
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail="Failed to delete tournament from database")
+
     return  # No content response
 
 
@@ -360,6 +466,228 @@ async def get_tournament_schedule(tournament_id: str = Path(..., description="ID
 # Assicurati di essere nella directory principale del progetto (non dentro backend/)
 # quando esegui questo comando.
 # Oppure, se sei in backend/: uvicorn main:app --reload --port 8000
+
+
+# --- Authentication Endpoints ---
+
+@app.post("/token", response_model=Token, summary="Create access token for user login")
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+    """
+    OAuth2 compatible token endpoint.
+    Takes email (as username) and password. Returns an access token.
+    """
+    user_dict = get_user_by_email_db(form_data.username)  # form_data.username is the email
+
+    if not user_dict:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",  # Keep it generic
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # Convert dict to User model instance
+    user_in_db = User(**user_dict)
+
+    # Check if user has a password (e.g. not a Google-only user)
+    if not user_in_db.hashed_password:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User registered through an external provider or password not set.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # Verify the password
+    if not verify_password(form_data.password, user_in_db.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",  # Keep it generic
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # Verify the password
+    # The hashed_password should come from your user model in the database
+    if not verify_password(form_data.password, user_in_db.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    if not user_in_db.is_active:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user")
+
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    # The 'sub' (subject) of the token should be a unique identifier for the user.
+    # Using user's email here, but user.id is also common.
+    access_token = create_access_token(
+        data={"sub": user_in_db.email}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
+@app.get("/login/google", summary="Redirect to Google OAuth for login")
+async def login_google(request: Request):
+    """
+    Redirects the user to Google's OAuth 2.0 server to initiate the login process.
+    The GOOGLE_REDIRECT_URI specified in auth.py (and used by main.py's oauth object)
+    is where Google will send the user back after authentication.
+    """
+    # The redirect_uri for authorize_redirect must match one of the
+    # OAuth 2.0 client's Authorized redirect URIs in Google Cloud Console.
+    # This is taken from the oauth.register client_kwargs or can be overridden here.
+    # Ensure it's the same as GOOGLE_REDIRECT_URI.
+    redirect_uri = GOOGLE_REDIRECT_URI  # Or request.url_for('auth_google') if you name the route
+    return await oauth.google.authorize_redirect(request, redirect_uri)
+
+
+@app.get("/auth/google", summary="Handle Google OAuth callback")
+async def auth_google(request: Request):
+    """
+    Handles the callback from Google OAuth.
+    If authentication is successful, it fetches the user's info,
+    creates or updates the user in the database, generates a JWT token,
+    and ideally redirects the user to the frontend with the token or a session.
+    For a SPA, it's common to pass the token back to the frontend,
+    which then stores it. This can be done via query parameters,
+    or by rendering a simple HTML page that posts the token to the parent window.
+    """
+    try:
+        token = await oauth.google.authorize_access_token(request)
+    except Exception as e:
+        # Log the error e
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail=f"Could not authorize Google token: {str(e)}")
+
+    user_info_from_google = token.get('userinfo')
+    if not user_info_from_google:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Could not fetch user info from Google")
+
+    google_email = user_info_from_google.get('email')
+    google_id = user_info_from_google.get('sub')  # 'sub' is the standard subject identifier
+
+    if not google_email:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email not provided by Google")
+
+    user_dict = get_user_by_email_db(google_email)
+    user: Optional[User] = None
+
+    if user_dict:
+        user = User(**user_dict)
+        # If user exists, ensure their google_id is stored if not already
+        if not user.google_id:
+            user.google_id = google_id
+            # Here we would call an update_user_db function if it existed
+            # For now, create_user_db might overwrite or we handle it manually
+            # This requires users.json to be an array of dicts, and update means replacing the dict.
+            # Let's assume create_user_db can handle updates if the user exists by email,
+            # or we add a specific update function later.
+            # For simplicity, if found, we assume it's correctly linked or we link it.
+            # This part needs robust handling in database.py: update_user_db
+            # For now, we'll rely on re-saving if we modify 'user' object from User model.
+            # This is not ideal as database.py works with dicts.
+            # Let's fetch, modify dict, then save.
+            # user_dict["google_id"] = google_id # Modify the dict
+            # This would require an update_user_db(user_dict) or similar.
+            # For the current json file approach, we'd need to rewrite the whole file.
+            # This logic will be refined in step 8.
+            # For now: (REPLACED WITH update_user_db)
+            update_data = {"google_id": google_id}
+            if not user.id:  # Should not happen if user was created properly
+                update_data["id"] = str(uuid.uuid4())  # Assign a new ID if missing
+
+            updated_user_dict = update_user_db(user.id, update_data)
+            if not updated_user_dict:
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                                    detail="Could not update user with Google ID.")
+            user = User(**updated_user_dict)  # Re-fetch/re-init to get the updated User model
+
+    else:
+        # User does not exist, create a new one
+        # Ensure new user gets an ID from the User model's default_factory
+        new_user_data = User(
+            email=google_email,
+            google_id=google_id,
+            is_active=True
+            # hashed_password is None as they are using Google to log in
+        )
+        created_user_dict = create_user_db(new_user_data.model_dump())
+        user = User(**created_user_dict)
+
+    if not user or not user.is_active:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="User is inactive or could not be processed")
+
+    # Generate JWT token for our application
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    app_access_token = create_access_token(
+        data={"sub": user.email}, expires_delta=access_token_expires
+    )
+
+    # For SPAs, redirecting with the token in a query parameter is common.
+    # The frontend then extracts it and stores it.
+    # IMPORTANT: Ensure your frontend URL is correct.
+    frontend_url = "http://localhost:3000"  # Configure this appropriately
+    redirect_url_with_token = f"{frontend_url}/auth/callback?token={app_access_token}&token_type=bearer"
+
+    # Alternatively, render an HTML page that posts the token to the parent window (more secure than query params for history)
+    # html_content = f"""
+    # <html>
+    # <head><title>Authentication Success</title></head>
+    # <body>
+    #   <p>Authenticated successfully. Please wait...</p>
+    #   <script>
+    #     window.opener.postMessage({{
+    #       type: 'auth_success',
+    #       token: '{app_access_token}',
+    #       token_type: 'bearer'
+    #     }}, '{frontend_url}'); // Target origin for security
+    #     window.close();
+    #   </script>
+    # </body>
+    # </html>
+    # """
+    # return HTMLResponse(content=html_content)
+
+    return RedirectResponse(url=redirect_url_with_token)
+
+
+@app.post("/users/register", response_model=User, status_code=status.HTTP_201_CREATED, summary="Register a new user")
+async def register_user(user_in: UserCreate):
+    """
+    Registers a new user with email and password.
+    - **email**: User's email address.
+    - **password**: User's password (min length 8 characters).
+    - **name**: Optional user's name.
+    """
+    existing_user = get_user_by_email_db(user_in.email)
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered. Please try logging in or use a different email.",
+        )
+
+    hashed_password = get_password_hash(user_in.password)
+
+    # Create the new user object. The User model includes an id field with a default factory.
+    new_user_data = User(
+        email=user_in.email,
+        hashed_password=hashed_password,
+        is_active=True  # Users are active by default upon registration
+        # name=user_in.name # If you added 'name' to User model and want to store it
+    )
+
+    # Convert Pydantic model to dict for database storage, ensuring default factory for ID is called.
+    user_to_save_dict = new_user_data.model_dump()
+
+    created_user_dict = create_user_db(user_to_save_dict)
+
+    # Return the created user, conforming to the response_model=User
+    # Pydantic will validate the created_user_dict against the User model.
+    return User(**created_user_dict)
+
+
+# import uuid # No longer needed here directly as User model handles ID generation and update_user_db handles missing IDs if necessary
+
 
 if __name__ == "__main__":
     import uvicorn
