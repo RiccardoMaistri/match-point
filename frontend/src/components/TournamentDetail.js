@@ -203,7 +203,7 @@ function TournamentDetail({ tournament, onBackToList, globalIsLoading, globalSet
   // La generazione dei match potrebbe essere permessa anche se la registrazione è chiusa,
   // ma non se il torneo è già iniziato o completato (logica più avanzata non implementata qui).
   // Per ora, permettiamo la generazione se ci sono partecipanti.
-  const canManageParticipants = tournament.registration_open;
+  // const canManageParticipants = tournament.registration_open; // DUPLICATE REMOVED
   // La generazione dei match potrebbe essere permessa anche se la registrazione è chiusa,
   // ma non se il torneo è già iniziato o completato (logica più avanzata non implementata qui).
   // Per ora, permettiamo la generazione se ci sono partecipanti.
