@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom'; // Removed useParams
 import * as api from '../services/api';
 
-function JoinTournamentPage({ currentUser, globalSetError, globalSetIsLoading, globalIsLoading, onLoginRequired }) {
-  const { inviteCode } = useParams();
+// Added inviteCode to props destructuring
+function JoinTournamentPage({ inviteCode, currentUser, globalSetError, globalSetIsLoading, globalIsLoading, onLoginRequired }) {
+  // const { inviteCode } = useParams(); // Removed: inviteCode will come from props
   const navigate = useNavigate();
   const [tournament, setTournament] = useState(null);
   const [joinMessage, setJoinMessage] = useState('');
