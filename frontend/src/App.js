@@ -2,9 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import './App.css';
 import TournamentList from './components/TournamentList';
 import TournamentForm from './components/TournamentForm';
-import TournamentDetail from './components/TournamentDetail'; // Importa il nuovo componente
-import LoginPage from './components/LoginPage'; // Auth component
-import RegisterPage from './components/RegisterPage'; // Auth component
+import TournamentDetail from './components/TournamentDetail';
+import LoginPage from './components/LoginPage';
+import RegisterPage from './components/RegisterPage';
+import JoinTournamentPage from './components/JoinTournamentPage'; // Import the new page
 import * as api from './services/api';
 
 function App() {
@@ -63,7 +64,15 @@ function App() {
       localStorage.setItem('authToken', data.access_token);
       // TODO: Fetch user details from a /users/me endpoint or decode token
       setCurrentUser({ token: data.access_token, email }); // Placeholder
-      window.location.href = '/tournaments'; // Redirect to tournaments
+
+      const postLoginRedirect = localStorage.getItem('postLoginRedirect');
+      if (postLoginRedirect) {
+        localStorage.removeItem('postLoginRedirect'); // Clean up
+        // If there's a postLoginAction, JoinTournamentPage's useEffect will handle it after redirect.
+        window.location.href = postLoginRedirect;
+      } else {
+        window.location.href = '/tournaments'; // Default redirect
+      }
     } catch (err) {
       setAuthError(err.message || 'Failed to login');
       setCurrentUser(null);
@@ -77,9 +86,20 @@ function App() {
     setIsAuthLoading(true);
     setAuthError(null);
     try {
-      await api.registerUser(userData);
+      const registeredUser = await api.registerUser(userData); // Assuming registerUser returns the user
       // After successful registration, log the user in automatically
-      await handleLogin(userData.email, userData.password);
+      const loginData = await api.loginUser(userData.email, userData.password);
+      localStorage.setItem('authToken', loginData.access_token);
+      setCurrentUser({ token: loginData.access_token, email: registeredUser.email }); // Use email from registeredUser
+
+      const postLoginRedirect = localStorage.getItem('postLoginRedirect');
+      if (postLoginRedirect) {
+        localStorage.removeItem('postLoginRedirect');
+        // JoinTournamentPage's useEffect for postLoginAction will handle the rest after redirect.
+        window.location.href = postLoginRedirect;
+      } else {
+        window.location.href = '/tournaments'; // Default redirect
+      }
     } catch (err) {
       setAuthError(err.message || 'Failed to register');
       setCurrentUser(null);
@@ -219,19 +239,45 @@ function App() {
       return <RegisterPage onRegister={handleRegister} error={authError} isLoading={isAuthLoading} />;
     }
 
+    // Handle join tournament page
+    // Basic routing for /join/:inviteCode
+    // A more robust router like React Router would handle this better
+    const joinMatch = route.match(/^\/join\/([a-zA-Z0-9-]+)$/);
+    if (joinMatch) {
+      const inviteCode = joinMatch[1];
+      // Pass necessary props to JoinTournamentPage
+      return (
+        <JoinTournamentPage
+          inviteCode={inviteCode} // Pass inviteCode directly if component extracts it via useParams
+          currentUser={currentUser}
+          globalSetError={setError} // Use the main app's error state
+          globalSetIsLoading={setIsLoading} // Use the main app's loading state
+          globalIsLoading={isLoading}
+          onLoginRequired={() => window.location.href = '/login'} // Redirect to login
+        />
+      );
+    }
+
+    // Handle specific tournament view by ID (e.g., /tournaments/:id)
+    // This needs to be more robust if using path variables extensively.
+    // For now, selectedTournament state handles this after clicking "View" from list.
+    // If we want direct URL access like /tournaments/xyz, a proper router is needed.
+
     // If still initializing, show a loading message or spinner
     if (isInitializing) {
       return <p className="text-center py-10">Initializing app...</p>;
     }
 
     // If not an auth route, and not initializing, proceed with tournament content
-    if (!currentUser && route !== '/login' && route !== '/register' && !route.startsWith('/auth/callback')) {
+    // Allow /join/* routes to be accessed without initial full login, JoinTournamentPage will handle logic.
+    if (!currentUser && route !== '/login' && route !== '/register' && !route.startsWith('/auth/callback') && !route.startsWith('/join/')) {
       // If trying to access a protected route without being logged in,
       // and it's not an auth page itself, redirect to login.
       // We also allow /auth/callback for the Google OAuth flow.
       window.location.href = '/login';
       return <p>Redirecting to login...</p>; // Show a message while redirecting
     }
+
 
     if (selectedTournament) {
       // Ensure user is logged in to see tournament details (example of protection)
@@ -244,6 +290,7 @@ function App() {
           globalIsLoading={isLoading}
           globalSetIsLoading={setIsLoading}
           globalSetError={setError}
+          currentUser={currentUser} // Pass current user for conditional rendering inside Detail
         />
       );
     }

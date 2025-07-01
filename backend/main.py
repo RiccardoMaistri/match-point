@@ -33,6 +33,8 @@ GOOGLE_CLIENT_SECRET = AUTH_GOOGLE_CLIENT_SECRET
 GOOGLE_REDIRECT_URI = AUTH_GOOGLE_REDIRECT_URI
 # --- End Authentication Settings ---
 
+FRONTEND_BASE_URL = "http://localhost:3000"  # Base URL for the frontend application
+
 # Initialize OAuth client (for Google Login)
 oauth = OAuth()
 oauth.register(
@@ -89,7 +91,16 @@ async def create_tournament(
 
     # Generate invitation link if not provided
     if not new_tournament_data.invitation_link:
-        new_tournament_data.invitation_link = f"/join/{uuid.uuid4()}"  # uuid needs to be imported
+        invite_code = str(uuid.uuid4())
+        new_tournament_data.invitation_link = f"{FRONTEND_BASE_URL}/join/{invite_code}"
+    elif not new_tournament_data.invitation_link.startswith(FRONTEND_BASE_URL):
+        # If a partial link like /join/code was provided, prepend base URL
+        if new_tournament_data.invitation_link.startswith("/join/"):
+            new_tournament_data.invitation_link = f"{FRONTEND_BASE_URL}{new_tournament_data.invitation_link}"
+        else: # Fallback for older or manually entered codes, generate a new full link
+            invite_code = str(uuid.uuid4())
+            new_tournament_data.invitation_link = f"{FRONTEND_BASE_URL}/join/{invite_code}"
+
 
     # Save to database
     created_tournament_dict = create_tournament_db(new_tournament_data.model_dump())
@@ -177,9 +188,13 @@ async def update_tournament(
         matches=existing_tournament.matches  # Matches are managed by separate endpoints
     )
 
-    # Generate new invitation link if not provided and was missing, or if explicitly cleared
-    if not updated_tournament_data.invitation_link:
-        updated_tournament_data.invitation_link = f"/join/{uuid.uuid4()}"
+    # Generate new invitation link if not provided and was missing, or if explicitly cleared, or not a full URL
+    if not updated_tournament_data.invitation_link or not updated_tournament_data.invitation_link.startswith(FRONTEND_BASE_URL):
+        if updated_tournament_data.invitation_link and updated_tournament_data.invitation_link.startswith("/join/"):
+             updated_tournament_data.invitation_link = f"{FRONTEND_BASE_URL}{updated_tournament_data.invitation_link}"
+        else: # Generate new if empty or malformed
+            invite_code = str(uuid.uuid4())
+            updated_tournament_data.invitation_link = f"{FRONTEND_BASE_URL}/join/{invite_code}"
 
     tournament_db = update_tournament_db(tournament_id, updated_tournament_data.model_dump())
     if not tournament_db:
@@ -252,6 +267,20 @@ async def get_tournament_participants(tournament_id: str = Path(..., description
     return tournament.participants
 
 
+@app.get("/tournament-by-invite/{invite_code}", response_model=Tournament, summary="Get tournament details by invite code")
+async def get_tournament_by_invite_code(invite_code: str = Path(..., description="The invitation code (UUID part of the link)")):
+    """
+    Retrieves tournament details if the invite code is valid and the tournament exists.
+    This endpoint is public and does not require authentication.
+    """
+    full_invite_link = f"{FRONTEND_BASE_URL}/join/{invite_code}"
+    all_tournaments = get_all_tournaments_db()
+    for t_dict in all_tournaments:
+        if t_dict.get("invitation_link") == full_invite_link:
+            return Tournament(**t_dict)
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found or invalid invite code.")
+
+
 @app.delete("/tournaments/{tournament_id}/participants/{participant_id}", status_code=status.HTTP_204_NO_CONTENT,
             summary="Rimuovi un partecipante da un torneo")
 async def remove_participant_from_tournament(
@@ -271,6 +300,51 @@ async def remove_participant_from_tournament(
 
     update_tournament_db(tournament_id, tournament.model_dump())
     return
+
+
+@app.post("/tournaments/{tournament_id}/join_authenticated", response_model=Participant, status_code=status.HTTP_201_CREATED, summary="Join a tournament as an authenticated user")
+async def join_tournament_authenticated(
+    tournament_id: str = Path(..., description="ID of the tournament to join"),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Allows an authenticated user to join a tournament.
+    The user is identified by their authentication token.
+    """
+    tournament_dict = get_tournament_db(tournament_id)
+    if not tournament_dict:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found")
+
+    tournament = Tournament(**tournament_dict)
+
+    if not tournament.registration_open:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Registration for this tournament is closed.")
+
+    # Check if user (by email) is already a participant
+    for p in tournament.participants:
+        if p.email == current_user.email:
+            # User is already a participant, return their participant info or raise an error
+            # For idempotency, we can return the existing participant.
+            # Or raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User already registered in this tournament.")
+            return p # Return existing participant entry
+
+    # Create a new participant from the current_user's details
+    # The Participant model expects 'name' and 'email'. 'name' might not be in User model directly.
+    # For now, let's assume User model might have a name, or use email as name if not.
+    # User model has: id, email, hashed_password, google_id, is_active. No 'name' field.
+    # We should use the user's email as the participant's name if no other name is available.
+    # Or, the Participant model could be made more flexible, or User model could be extended.
+    # Let's use email for name for now if User.name is not available.
+    participant_name = getattr(current_user, 'name', current_user.email) # Get 'name' if exists, else email
+
+    new_participant = Participant(
+        name=participant_name, # Or current_user.name if you add it to User model
+        email=current_user.email
+        # ID is auto-generated by Participant model
+    )
+    tournament.participants.append(new_participant)
+    update_tournament_db(tournament_id, tournament.model_dump())
+    return new_participant
 
 
 # --- Endpoints Match e Risultati (da implementare) ---

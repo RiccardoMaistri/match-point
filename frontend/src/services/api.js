@@ -131,6 +131,18 @@ export const getTournamentSchedule = async (tournamentId) => {
     return authenticatedFetch(`${API_BASE_URL}/tournaments/${tournamentId}/schedule`, 'GET');
 };
 
+// --- Invitation Link Endpoints ---
+export const getTournamentByInviteCode = async (inviteCode) => {
+  // This is a public endpoint
+  const response = await fetch(`${API_BASE_URL}/tournament-by-invite/${inviteCode}`);
+  return handleResponse(response);
+};
+
+export const joinTournamentAuthenticated = async (tournamentId) => {
+  // Requires authentication
+  return authenticatedFetch(`${API_BASE_URL}/tournaments/${tournamentId}/join_authenticated`, 'POST');
+};
+
 // --- Auth Endpoints ---
 
 export const registerUser = async (userData) => {
