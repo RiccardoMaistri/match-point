@@ -760,6 +760,22 @@ async def register_user(user_in: UserCreate):
     return User(**created_user_dict)
 
 
+@app.get("/users/me", response_model=User, summary="Get current authenticated user's details")
+async def read_users_me(current_user: User = Depends(get_current_active_user)):
+    """
+    Returns the details of the currently authenticated user.
+    """
+    # The current_user object obtained from get_current_active_user is already a Pydantic User model instance.
+    # It would have been populated based on the token's subject (e.g., email) and then fetched from the DB.
+    # If get_current_active_user directly returns the User model instance from the database,
+    # then it already contains all necessary fields like id, email, is_active, etc.
+    # (excluding sensitive fields like hashed_password if the response_model=User filters it, which it should).
+    # The User model should have sensitive fields like hashed_password excluded from serialization by default
+    # or via response_model_exclude={"hashed_password"} if not done automatically by Pydantic's smartness with response_model.
+    # For now, assuming User model's default serialization is safe or response_model handles it.
+    return current_user
+
+
 # import uuid # No longer needed here directly as User model handles ID generation and update_user_db handles missing IDs if necessary
 
 

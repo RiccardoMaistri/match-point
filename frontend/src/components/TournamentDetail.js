@@ -241,7 +241,19 @@ function TournamentDetail({ tournament, onBackToList, globalIsLoading, globalSet
           <div><strong className="text-slate-600">Date:</strong> <span className="text-slate-800">{new Date(tournament.start_date).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</span></div>
         )}
         {tournament.invitation_link && (
-            <div className="sm:col-span-2 md:col-span-3"><strong className="text-slate-600">Invitation Link:</strong> <a href={tournament.invitation_link} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:text-indigo-800 hover:underline break-all">{tournament.invitation_link}</a></div>
+            <div className="sm:col-span-2 md:col-span-3 flex flex-wrap items-center gap-x-2">
+                <strong className="text-slate-600">Invitation Link:</strong>
+                <a href={tournament.invitation_link} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:text-indigo-800 hover:underline break-all">{tournament.invitation_link}</a>
+                {isOwner && (
+                     <button
+                        onClick={handleShareInviteLink}
+                        className="px-3 py-1 text-xs font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        title="Share Invite Link"
+                    >
+                        Share
+                    </button>
+                )}
+            </div>
         )}
       </div>
 
@@ -265,14 +277,7 @@ function TournamentDetail({ tournament, onBackToList, globalIsLoading, globalSet
         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 flex-wrap">
             <h3 className="text-xl font-semibold text-slate-800">Participants</h3>
             <div className="flex gap-2 flex-wrap">
-                {isOwner && tournament.invitation_link && (
-                    <button
-                        onClick={handleShareInviteLink}
-                        className="self-start sm:self-auto px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                        Share Invite Link
-                    </button>
-                )}
+                {/* Share button was moved near the invitation link display */}
                 {!showParticipantForm && canManageParticipants && isOwner && (
                     <button
                     onClick={() => setShowParticipantForm(true)}

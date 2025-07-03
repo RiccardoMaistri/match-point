@@ -160,38 +160,62 @@ function App() {
 
   // Handle Google OAuth callback
   useEffect(() => {
-    if (location.pathname === '/auth/callback') {
-      const params = new URLSearchParams(location.search);
-      const token = params.get('token');
-      if (token) {
-        localStorage.setItem('authToken', token);
-        // TODO: Decode token or fetch /me
-        setCurrentUser({ token }); // Placeholder
-        navigate("/"); // Redirect to home/dashboard after storing token
-      } else {
-        setAuthError("Failed to login with Google.");
-        navigate("/login"); // Redirect to login on error
+    const processAuthCallback = async () => {
+      if (location.pathname === '/auth/callback') {
+        const params = new URLSearchParams(location.search);
+        const token = params.get('token');
+        if (token) {
+          localStorage.setItem('authToken', token);
+          try {
+            const userDetails = await api.getCurrentUserDetails();
+            setCurrentUser(userDetails); // Set full user object
+            navigate("/"); // Redirect to home/dashboard
+          } catch (err) {
+            console.error("Error fetching user details after Google login:", err);
+            setAuthError("Failed to fetch user details after Google login.");
+            localStorage.removeItem('authToken'); // Clear potentially invalid token
+            setCurrentUser(null);
+            navigate("/login");
+          }
+        } else {
+          setAuthError("Failed to login with Google (token missing).");
+          navigate("/login"); // Redirect to login on error
+        }
       }
-    }
+    };
+    processAuthCallback();
   }, [location, navigate]);
 
   // Check for token on initial load
   useEffect(() => {
-    const token = localStorage.getItem('authToken');
-    if (token) {
-      // TODO: Validate token with a /users/me endpoint or decode it
-      setCurrentUser({ token }); // Replace with actual user object later
-    }
-    setIsInitializing(false);
+    const verifyTokenAndFetchUser = async () => {
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        try {
+          const userDetails = await api.getCurrentUserDetails();
+          setCurrentUser(userDetails); // Set full user object
+        } catch (error) {
+          console.error("Token validation failed or failed to fetch user:", error);
+          // Token might be expired or invalid, clear it
+          localStorage.removeItem('authToken');
+          setCurrentUser(null);
+          // Optionally, redirect to login if on a protected route,
+          // but ProtectedRoute component will handle this.
+        }
+      }
+      setIsInitializing(false);
+    };
+    verifyTokenAndFetchUser();
   }, []);
 
   const handleLogin = async (email, password) => {
     setIsAuthLoading(true);
     setAuthError(null);
     try {
-      const data = await api.loginUser(email, password);
-      localStorage.setItem('authToken', data.access_token);
-      setCurrentUser({ token: data.access_token, email });
+      const loginData = await api.loginUser(email, password);
+      localStorage.setItem('authToken', loginData.access_token);
+      const userDetails = await api.getCurrentUserDetails();
+      setCurrentUser(userDetails);
 
       const postLoginRedirect = localStorage.getItem('postLoginRedirect');
       if (postLoginRedirect) {
@@ -213,10 +237,12 @@ function App() {
     setIsAuthLoading(true);
     setAuthError(null);
     try {
-      const registeredUser = await api.registerUser(userData);
+      // const registeredUser = await api.registerUser(userData); // registerUser returns the user
+      await api.registerUser(userData); // No need to store registeredUser if we fetch /me next
       const loginData = await api.loginUser(userData.email, userData.password);
       localStorage.setItem('authToken', loginData.access_token);
-      setCurrentUser({ token: loginData.access_token, email: registeredUser.email });
+      const userDetails = await api.getCurrentUserDetails(); // Fetch full user details
+      setCurrentUser(userDetails); // Set current user with full details
 
       const postLoginRedirect = localStorage.getItem('postLoginRedirect');
       if (postLoginRedirect) {

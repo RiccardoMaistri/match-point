@@ -172,7 +172,10 @@ export const loginUser = async (email, password) => {
   return handleResponse(response); // Expects { access_token, token_type }
 };
 
-// TODO: Add function to get current user details (e.g., /users/me) if needed
+export const getCurrentUserDetails = async () => {
+  // This function assumes the user is already authenticated and token is in localStorage
+  return authenticatedFetch(`${API_BASE_URL}/users/me`, 'GET');
+};
 
 
 export { API_BASE_URL }; // Esporta anche API_BASE_URL se serve altrove direttamente.
