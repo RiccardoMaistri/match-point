@@ -3,11 +3,12 @@ import * as api from '../services/api';
 import ParticipantList from './ParticipantList';
 import ParticipantForm from './ParticipantForm';
 import MatchList from './MatchList';
-import RecordResultModal from './RecordResultModal'; // Importa il modale
+import RecordResultModal from './RecordResultModal';
 
-function TournamentDetail({ tournament, onBackToList, globalIsLoading, globalSetIsLoading, globalSetError }) {
+function TournamentDetail({ tournament, onBackToList, globalIsLoading, globalSetIsLoading, globalSetError, currentUser }) {
   const [participants, setParticipants] = useState([]);
   const [matches, setMatches] = useState([]);
+  const [shareFeedback, setShareFeedback] = useState('');
   const [showParticipantForm, setShowParticipantForm] = useState(false);
 
   // Stati per il modale di inserimento risultati
@@ -69,6 +70,49 @@ function TournamentDetail({ tournament, onBackToList, globalIsLoading, globalSet
       globalSetIsLoading(false);
     }
   };
+
+  const handleShareInviteLink = async () => {
+    setShareFeedback('');
+    if (tournament?.invitation_link) {
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: `Join Tournament: ${tournament.name}`,
+            text: `You're invited to join the tournament "${tournament.name}". Click the link to register:`,
+            url: tournament.invitation_link,
+          });
+          setShareFeedback('Invitation link shared successfully!');
+        } catch (error) {
+          console.error('Error sharing:', error);
+          // Fallback to copy if sharing fails (e.g., user cancels)
+          if (error.name !== 'AbortError') {
+            copyToClipboard();
+          } else {
+            setShareFeedback('Sharing cancelled.');
+          }
+        }
+      } else {
+        // Fallback for browsers that do not support Web Share API
+        copyToClipboard();
+      }
+    } else {
+      setShareFeedback('No invitation link available for this tournament.');
+    }
+    // Clear feedback message after a few seconds
+    setTimeout(() => setShareFeedback(''), 3000);
+  };
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(tournament.invitation_link)
+      .then(() => {
+        setShareFeedback('Invitation link copied to clipboard!');
+      })
+      .catch(err => {
+        console.error('Failed to copy link: ', err);
+        setShareFeedback('Failed to copy link. Please copy it manually.');
+      });
+  };
+
 
   const handleRemoveParticipant = async (tournamentId, participantId) => {
     if (!window.confirm('Are you sure you want to remove this participant?')) {
@@ -159,7 +203,12 @@ function TournamentDetail({ tournament, onBackToList, globalIsLoading, globalSet
   // La generazione dei match potrebbe essere permessa anche se la registrazione è chiusa,
   // ma non se il torneo è già iniziato o completato (logica più avanzata non implementata qui).
   // Per ora, permettiamo la generazione se ci sono partecipanti.
+  // const canManageParticipants = tournament.registration_open; // DUPLICATE REMOVED
+  // La generazione dei match potrebbe essere permessa anche se la registrazione è chiusa,
+  // ma non se il torneo è già iniziato o completato (logica più avanzata non implementata qui).
+  // Per ora, permettiamo la generazione se ci sono partecipanti.
   const canGenerateMatches = participants.length >= 2;
+  const isOwner = currentUser && tournament && tournament.user_id === currentUser.id; // Check if current user is the tournament owner
 
 
   return (
@@ -168,7 +217,7 @@ function TournamentDetail({ tournament, onBackToList, globalIsLoading, globalSet
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
         <div>
             <h2 className="text-2xl sm:text-3xl font-bold text-indigo-700 leading-tight">{tournament.name}</h2>
-            <p className="text-xs text-slate-500">ID: {tournament.id}</p>
+            <p className="text-xs text-slate-500">ID: {tournament.id} {isOwner && "(Owned by you)"}</p>
         </div>
         <button
           onClick={onBackToList}
@@ -192,7 +241,19 @@ function TournamentDetail({ tournament, onBackToList, globalIsLoading, globalSet
           <div><strong className="text-slate-600">Date:</strong> <span className="text-slate-800">{new Date(tournament.start_date).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</span></div>
         )}
         {tournament.invitation_link && (
-            <div className="sm:col-span-2 md:col-span-3"><strong className="text-slate-600">Invitation Link:</strong> <a href={tournament.invitation_link} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:text-indigo-800 hover:underline break-all">{tournament.invitation_link}</a></div>
+            <div className="sm:col-span-2 md:col-span-3 flex flex-wrap items-center gap-x-2">
+                <strong className="text-slate-600">Invitation Link:</strong>
+                <a href={tournament.invitation_link} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:text-indigo-800 hover:underline break-all">{tournament.invitation_link}</a>
+                {isOwner && (
+                     <button
+                        onClick={handleShareInviteLink}
+                        className="px-3 py-1 text-xs font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        title="Share Invite Link"
+                    >
+                        Share
+                    </button>
+                )}
+            </div>
         )}
       </div>
 
@@ -201,21 +262,34 @@ function TournamentDetail({ tournament, onBackToList, globalIsLoading, globalSet
       {/* globalSetError è gestito in App.js per errori globali, ma potremmo mostrare errori specifici qui */}
 
 
+      {/* Global Loading/Error for this detail view can be shown here if needed */}
+      {globalIsLoading && (!participants.length && !matches.length) && <p className="text-center text-indigo-600 py-4">Loading tournament details...</p>}
+      {/* globalSetError è gestito in App.js per errori globali, ma potremmo mostrare errori specifici qui */}
+
+      {shareFeedback && (
+        <div className={`mt-2 p-2 text-sm rounded-md text-center ${shareFeedback.includes('copied') || shareFeedback.includes('shared') ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+            {shareFeedback}
+        </div>
+      )}
+
       {/* Participant Management Section */}
       <div className="p-4 sm:p-5 bg-white rounded-lg shadow border border-slate-100 space-y-4">
-        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 flex-wrap">
             <h3 className="text-xl font-semibold text-slate-800">Participants</h3>
-            {!showParticipantForm && canManageParticipants && (
-                <button
-                onClick={() => setShowParticipantForm(true)}
-                className="self-start sm:self-auto px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500"
-                >
-                + Add Participant
-                </button>
-            )}
+            <div className="flex gap-2 flex-wrap">
+                {/* Share button was moved near the invitation link display */}
+                {!showParticipantForm && canManageParticipants && isOwner && (
+                    <button
+                    onClick={() => setShowParticipantForm(true)}
+                    className="self-start sm:self-auto px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500"
+                    >
+                    + Add Participant Manually
+                    </button>
+                )}
+            </div>
         </div>
 
-        {showParticipantForm && canManageParticipants && (
+        {showParticipantForm && canManageParticipants && isOwner && (
           <ParticipantForm
             tournamentId={tournament.id}
             onSubmit={handleAddParticipant}
@@ -228,7 +302,7 @@ function TournamentDetail({ tournament, onBackToList, globalIsLoading, globalSet
         <ParticipantList
           participants={participants}
           tournamentId={tournament.id}
-          onRemoveParticipant={canManageParticipants ? handleRemoveParticipant : null} // Passa null se non si può rimuovere
+          onRemoveParticipant={canManageParticipants && isOwner ? handleRemoveParticipant : null}
         />
       </div>
 
@@ -237,7 +311,7 @@ function TournamentDetail({ tournament, onBackToList, globalIsLoading, globalSet
       <div className="p-4 sm:p-5 bg-white rounded-lg shadow border border-slate-100 space-y-4">
         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
             <h3 className="text-xl font-semibold text-slate-800">Matches / {tournament.format === 'elimination' ? 'Bracket' : 'Schedule'}</h3>
-            {canGenerateMatches && (
+            {canGenerateMatches && isOwner && (
                  <button
                     onClick={handleGenerateMatches}
                     disabled={globalIsLoading} // Disabilita durante caricamenti globali
@@ -248,6 +322,8 @@ function TournamentDetail({ tournament, onBackToList, globalIsLoading, globalSet
             )}
         </div>
         {!canGenerateMatches && participants.length < 2 && <p className="text-sm text-slate-500 italic">At least 2 participants are needed to generate matches.</p>}
+        {canGenerateMatches && !isOwner && <p className="text-sm text-slate-500 italic">Match generation is managed by the tournament owner.</p>}
+
 
         <MatchList
             matches={matches}
