@@ -169,7 +169,13 @@ function App() {
           try {
             const userDetails = await api.getCurrentUserDetails();
             setCurrentUser(userDetails); // Set full user object
-            navigate("/"); // Redirect to home/dashboard
+            const postLoginRedirect = localStorage.getItem('postLoginRedirect');
+            if (postLoginRedirect) {
+              localStorage.removeItem('postLoginRedirect');
+              navigate(postLoginRedirect);
+            } else {
+              navigate('/tournaments'); // Default redirect
+            }
           } catch (err) {
             console.error("Error fetching user details after Google login:", err);
             setAuthError("Failed to fetch user details after Google login.");
