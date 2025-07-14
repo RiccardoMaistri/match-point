@@ -174,32 +174,52 @@ async def update_tournament(
 
     # Construct the full updated Tournament object
     # Preserve existing id, user_id, participants, matches
-    updated_tournament_data = Tournament(
-        id=existing_tournament.id,
-        user_id=current_user.id,  # Owner doesn't change
-        name=tournament_update_payload.name,
-        tournament_type=tournament_update_payload.tournament_type,
-        format=tournament_update_payload.format,
-        start_date=tournament_update_payload.start_date,
-        registration_open=tournament_update_payload.registration_open,
-        invitation_link=tournament_update_payload.invitation_link if tournament_update_payload.invitation_link else existing_tournament.invitation_link,
-        participants=existing_tournament.participants,  # Participants are managed by separate endpoints
-        matches=existing_tournament.matches  # Matches are managed by separate endpoints
-    )
+    update_data = tournament_update_payload.model_dump(exclude_unset=True)
+    updated_tournament = existing_tournament.copy(update=update_data)
 
     # Generate new invitation link if not provided and was missing, or if explicitly cleared, or not a full URL
-    if not updated_tournament_data.invitation_link or not updated_tournament_data.invitation_link.startswith(
+    if not updated_tournament.invitation_link or not updated_tournament.invitation_link.startswith(
             FRONTEND_BASE_URL):
-        if updated_tournament_data.invitation_link and updated_tournament_data.invitation_link.startswith("/join/"):
-            updated_tournament_data.invitation_link = f"{FRONTEND_BASE_URL}{updated_tournament_data.invitation_link}"
+        if updated_tournament.invitation_link and updated_tournament.invitation_link.startswith("/join/"):
+            updated_tournament.invitation_link = f"{FRONTEND_BASE_URL}{updated_tournament.invitation_link}"
         else:  # Generate new if empty or malformed
             invite_code = str(uuid.uuid4())
-            updated_tournament_data.invitation_link = f"{FRONTEND_BASE_URL}/join/{invite_code}"
+            updated_tournament.invitation_link = f"{FRONTEND_BASE_URL}/join/{invite_code}"
 
-    tournament_db = update_tournament_db(tournament_id, updated_tournament_data.model_dump())
+    tournament_db = update_tournament_db(tournament_id, updated_tournament.model_dump())
     if not tournament_db:
         # This case should ideally not be reached if the initial get_tournament_db succeeded
         # and update_tournament_db correctly finds the tournament by ID.
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found during update process")
+    return Tournament(**tournament_db)
+
+
+@app.put("/tournaments/{tournament_id}/status", response_model=Tournament, status_code=status.HTTP_200_OK,
+         summary="Aggiorna lo stato di un torneo")
+async def update_tournament_status(
+        tournament_id: str = Path(..., description="ID del torneo da aggiornare"),
+        status: str = Body(..., embed=True),
+        current_user: User = Depends(get_current_active_user)
+):
+    """
+    Aggiorna lo stato di un torneo. Richiede autenticazione.
+    L'utente deve essere il proprietario del torneo.
+    """
+    existing_tournament_dict = get_tournament_db(tournament_id)
+    if not existing_tournament_dict:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found")
+
+    existing_tournament = Tournament(**existing_tournament_dict)
+
+    if existing_tournament.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to update this tournament")
+
+    if status not in ['open', 'in_progress', 'completed']:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid status")
+
+    existing_tournament.status = status
+    tournament_db = update_tournament_db(tournament_id, existing_tournament.model_dump())
+    if not tournament_db:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found during update process")
     return Tournament(**tournament_db)
 
@@ -370,6 +390,7 @@ async def generate_matches_for_tournament(tournament_id: str = Path(..., descrip
 
     # Logica di generazione placeholder
     tournament.matches = []  # Resetta i match esistenti
+    tournament.status = 'in_progress'
     if tournament.format == "elimination":
         # Semplice logica di placeholder per eliminazione diretta
         # In un'implementazione reale, questo sarebbe molto più complesso
@@ -499,6 +520,12 @@ async def record_match_result(
         match_to_update.status = 'in_progress'
 
     tournament.matches[match_index] = match_to_update
+
+    # Check if all matches are completed
+    all_matches_completed = all(m.status == 'completed' for m in tournament.matches)
+    if all_matches_completed:
+        tournament.status = 'completed'
+
     update_tournament_db(tournament_id, tournament.model_dump())
     return match_to_update
 
@@ -537,6 +564,49 @@ async def get_tournament_schedule(tournament_id: str = Path(..., description="ID
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="Schedule view is for round-robin tournaments only.")
     return {"tournament_id": tournament.id, "name": tournament.name, "matches": tournament.matches}
+
+
+@app.get("/tournaments/{tournament_id}/results", summary="Ottieni i risultati finali di un torneo")
+async def get_tournament_results(tournament_id: str = Path(..., description="ID del torneo")):
+    """
+    Restituisce i risultati finali di un torneo.
+    """
+    tournament_dict = get_tournament_db(tournament_id)
+    if not tournament_dict:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found")
+
+    tournament = Tournament(**tournament_dict)
+
+    # if tournament.status != 'completed':
+    #     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Tournament not completed yet")
+
+    results = []
+    if tournament.format == "elimination":
+        # For elimination, the winner is the winner of the final match
+        final_match = None
+        for match in tournament.matches:
+            if match.round_number == max(m.round_number for m in tournament.matches if m.round_number is not None):
+                final_match = match
+                break
+        if final_match and final_match.winner_id:
+            winner = next((p for p in tournament.participants if p.id == final_match.winner_id), None)
+            if winner:
+                results.append({"participant": winner.name, "rank": 1})
+    elif tournament.format == "round_robin":
+        # For round robin, rank participants by number of wins
+        participant_wins = {p.id: 0 for p in tournament.participants}
+        for match in tournament.matches:
+            if match.winner_id:
+                participant_wins[match.winner_id] += 1
+
+        sorted_participants = sorted(participant_wins.items(), key=lambda item: item[1], reverse=True)
+
+        for i, (participant_id, wins) in enumerate(sorted_participants):
+            participant = next((p for p in tournament.participants if p.id == participant_id), None)
+            if participant:
+                results.append({"participant": participant.name, "rank": i + 1, "wins": wins})
+
+    return results
 
 
 # Per avviare l'app con Uvicorn (per lo sviluppo):

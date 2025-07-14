@@ -209,6 +209,48 @@ function TournamentDetail({ tournament, onBackToList, globalIsLoading, globalSet
   // Per ora, permettiamo la generazione se ci sono partecipanti.
   const canGenerateMatches = participants.length >= 2;
   const isOwner = currentUser && tournament && tournament.user_id === currentUser.id; // Check if current user is the tournament owner
+  const [results, setResults] = useState([]);
+
+  const handleStatusChange = async (newStatus) => {
+    if (!tournament?.id) return;
+    globalSetIsLoading(true);
+    globalSetError(null);
+    try {
+      await api.updateTournamentStatus(tournament.id, newStatus);
+      // Optimistically update the status in the UI, or refetch the tournament
+      // For simplicity, we can just show an alert and let the user see the change on next refresh
+      // or better, refetch the tournament details
+      alert("Tournament status updated successfully!");
+      // Refetch tournament data to show updated status
+      fetchParticipantsAndMatches();
+    } catch (err) {
+      globalSetError(err.message || 'Failed to update tournament status');
+      console.error(err);
+    } finally {
+      globalSetIsLoading(false);
+    }
+  };
+
+  const fetchResults = useCallback(async () => {
+    if (!tournament?.id) return;
+    globalSetIsLoading(true);
+    globalSetError(null);
+    try {
+      const resultsData = await api.getTournamentResults(tournament.id);
+      setResults(resultsData);
+    } catch (err) {
+      globalSetError(err.message || `Failed to fetch results for tournament ${tournament.name}`);
+      console.error(err);
+    } finally {
+      globalSetIsLoading(false);
+    }
+  }, [tournament?.id, tournament?.name, globalSetIsLoading, globalSetError]);
+
+  useEffect(() => {
+    if (tournament?.status === 'completed') {
+      fetchResults();
+    }
+  }, [tournament?.status, fetchResults]);
 
 
   return (
@@ -233,10 +275,28 @@ function TournamentDetail({ tournament, onBackToList, globalIsLoading, globalSet
         <div><strong className="text-slate-600">Format:</strong> <span className="text-slate-800 capitalize">{tournament.format.replace('_', ' ')}</span></div>
         <div>
             <strong className="text-slate-600">Status:</strong>
-            <span className={`ml-1 px-2 py-0.5 text-xs rounded-full font-semibold ${tournament.registration_open ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                {tournament.registration_open ? 'Registration Open' : 'Registration Closed'}
+            <span className={`ml-1 px-2 py-0.5 text-xs rounded-full font-semibold ${
+                tournament.status === 'open' ? 'bg-green-100 text-green-700' :
+                tournament.status === 'in_progress' ? 'bg-yellow-100 text-yellow-700' :
+                'bg-red-100 text-red-700'
+            }`}>
+                {tournament.status.replace('_', ' ')}
             </span>
         </div>
+        {isOwner && (
+            <div className="sm:col-span-2 md:col-span-3 flex flex-wrap items-center gap-x-2">
+                <strong className="text-slate-600">Change Status:</strong>
+                <select
+                    value={tournament.status}
+                    onChange={(e) => handleStatusChange(e.target.value)}
+                    className="p-1 border rounded"
+                >
+                    <option value="open">Open</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                </select>
+            </div>
+        )}
         {tournament.start_date && (
           <div><strong className="text-slate-600">Date:</strong> <span className="text-slate-800">{new Date(tournament.start_date).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</span></div>
         )}
@@ -331,8 +391,28 @@ function TournamentDetail({ tournament, onBackToList, globalIsLoading, globalSet
             onRecordResult={(tId, mId) => openRecordResultModal(mId)}
             tournamentId={tournament.id}
             tournamentFormat={tournament.format}
+            currentUser={currentUser}
+            tournamentOwnerId={tournament.user_id}
         />
       </div>
+
+      {tournament.status === 'completed' && (
+        <div className="p-4 sm:p-5 bg-white rounded-lg shadow border border-slate-100 space-y-4">
+          <h3 className="text-xl font-semibold text-slate-800">Final Results</h3>
+          {results.length > 0 ? (
+            <ul className="list-disc pl-5">
+              {results.map((result, index) => (
+                <li key={index} className="mb-2">
+                  <span className="font-bold">{result.rank}. {result.participant}</span>
+                  {result.wins !== undefined && ` (${result.wins} wins)`}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p>No results available.</p>
+          )}
+        </div>
+      )}
 
       {isResultModalOpen && currentMatchForResult && (
         <RecordResultModal

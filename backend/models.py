@@ -69,9 +69,11 @@ class Tournament(BaseModel):
     tournament_type: Literal['single', 'double']  # singolo o doppio
     format: Literal['elimination', 'round_robin']  # eliminazione diretta o girone all'italiana
     start_date: Optional[datetime] = None
+    due_date: Optional[datetime] = None
     participants: List[Participant] = []
     matches: List[Match] = []
     registration_open: bool = True
+    status: Literal['open', 'in_progress', 'completed'] = 'open'
     invitation_link: Optional[str] = None  # Link univoco per l'iscrizione
 
     class Config:

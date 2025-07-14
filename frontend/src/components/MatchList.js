@@ -7,7 +7,7 @@ const getParticipantName = (participantId, participants) => {
   return participant ? participant.name : 'Unknown Participant';
 };
 
-function MatchList({ matches, participants, onRecordResult, tournamentId, tournamentFormat }) {
+function MatchList({ matches, participants, onRecordResult, tournamentId, tournamentFormat, currentUser, tournamentOwnerId }) {
   if (!matches || matches.length === 0) {
     return <p className="text-sm text-slate-500 italic py-2">No matches have been generated for this tournament yet.</p>;
   }
@@ -57,7 +57,10 @@ function MatchList({ matches, participants, onRecordResult, tournamentId, tourna
                   </p>
                 )}
               </div>
-              {!match.is_bye && match.status !== 'completed' && onRecordResult && (
+              {!match.is_bye && match.status !== 'completed' && onRecordResult &&
+                (currentUser?.id === tournamentOwnerId ||
+                 match.participant1_id === currentUser?.id ||
+                 match.participant2_id === currentUser?.id) && (
                 <button
                   onClick={() => onRecordResult(tournamentId, match.id)}
                   className="mt-2 sm:mt-0 sm:ml-4 px-3 py-1.5 text-xs font-medium text-white bg-indigo-500 rounded-md hover:bg-indigo-600 transition-colors self-start sm:self-center"
