@@ -4,17 +4,18 @@ import ParticipantList from './ParticipantList';
 import ParticipantForm from './ParticipantForm';
 import MatchList from './MatchList';
 import RecordResultModal from './RecordResultModal';
+import Leaderboard from './Leaderboard';
 
 function TournamentDetail({ tournament, onBackToList, globalIsLoading, globalSetIsLoading, globalSetError, currentUser }) {
   const [participants, setParticipants] = useState([]);
   const [matches, setMatches] = useState([]);
   const [shareFeedback, setShareFeedback] = useState('');
   const [showParticipantForm, setShowParticipantForm] = useState(false);
+  const [results, setResults] = useState([]);
 
   // Stati per il modale di inserimento risultati
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
   const [currentMatchForResult, setCurrentMatchForResult] = useState(null);
-
 
   const fetchParticipantsAndMatches = useCallback(async () => {
     if (!tournament?.id) return;
@@ -50,11 +51,32 @@ function TournamentDetail({ tournament, onBackToList, globalIsLoading, globalSet
     }
   }, [tournament?.id, tournament?.name, tournament?.format, globalSetIsLoading, globalSetError]); // Aggiunto tournament.format
 
+  const fetchResults = useCallback(async () => {
+    if (!tournament?.id) return;
+    globalSetIsLoading(true);
+    globalSetError(null);
+    try {
+      const resultsData = await api.getTournamentResults(tournament.id);
+      setResults(resultsData);
+    } catch (err) {
+      globalSetError(err.message || `Failed to fetch results for tournament ${tournament.name}`);
+      console.error(err);
+    } finally {
+      globalSetIsLoading(false);
+    }
+  }, [tournament?.id, tournament?.name, globalSetIsLoading, globalSetError]);
+
   useEffect(() => {
     if (tournament?.id) { // Assicurati che ci sia un torneo prima di fetchare
         fetchParticipantsAndMatches();
     }
   }, [fetchParticipantsAndMatches, tournament?.id]); // Aggiunto tournament.id come dipendenza
+
+  useEffect(() => {
+    if (tournament?.status === 'completed') {
+      fetchResults();
+    }
+  }, [tournament?.status, fetchResults]);
 
   const handleAddParticipant = async (tournamentId, participantData) => {
     globalSetIsLoading(true);
@@ -112,7 +134,6 @@ function TournamentDetail({ tournament, onBackToList, globalIsLoading, globalSet
         setShareFeedback('Failed to copy link. Please copy it manually.');
       });
   };
-
 
   const handleRemoveParticipant = async (tournamentId, participantId) => {
     if (!window.confirm('Are you sure you want to remove this participant?')) {
@@ -183,34 +204,6 @@ function TournamentDetail({ tournament, onBackToList, globalIsLoading, globalSet
     }
   };
 
-
-  if (!tournament) {
-    // Questo caso dovrebbe essere gestito da App.js, ma per sicurezza:
-    return (
-        <div className="bg-white p-6 rounded-lg shadow-xl text-center">
-            <p className="text-lg text-slate-700">Tournament data is not available or not selected.</p>
-            <button
-                onClick={onBackToList}
-                className="mt-4 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition-colors"
-            >
-                &larr; Back to Tournaments List
-            </button>
-        </div>
-    );
-  }
-
-  const canManageParticipants = tournament.registration_open;
-  // La generazione dei match potrebbe essere permessa anche se la registrazione è chiusa,
-  // ma non se il torneo è già iniziato o completato (logica più avanzata non implementata qui).
-  // Per ora, permettiamo la generazione se ci sono partecipanti.
-  // const canManageParticipants = tournament.registration_open; // DUPLICATE REMOVED
-  // La generazione dei match potrebbe essere permessa anche se la registrazione è chiusa,
-  // ma non se il torneo è già iniziato o completato (logica più avanzata non implementata qui).
-  // Per ora, permettiamo la generazione se ci sono partecipanti.
-  const canGenerateMatches = participants.length >= 2;
-  const isOwner = currentUser && tournament && tournament.user_id === currentUser.id; // Check if current user is the tournament owner
-  const [results, setResults] = useState([]);
-
   const handleStatusChange = async (newStatus) => {
     if (!tournament?.id) return;
     globalSetIsLoading(true);
@@ -231,27 +224,27 @@ function TournamentDetail({ tournament, onBackToList, globalIsLoading, globalSet
     }
   };
 
-  const fetchResults = useCallback(async () => {
-    if (!tournament?.id) return;
-    globalSetIsLoading(true);
-    globalSetError(null);
-    try {
-      const resultsData = await api.getTournamentResults(tournament.id);
-      setResults(resultsData);
-    } catch (err) {
-      globalSetError(err.message || `Failed to fetch results for tournament ${tournament.name}`);
-      console.error(err);
-    } finally {
-      globalSetIsLoading(false);
-    }
-  }, [tournament?.id, tournament?.name, globalSetIsLoading, globalSetError]);
+  if (!tournament) {
+    // Questo caso dovrebbe essere gestito da App.js, ma per sicurezza:
+    return (
+        <div className="bg-white p-6 rounded-lg shadow-xl text-center">
+            <p className="text-lg text-slate-700">Tournament data is not available or not selected.</p>
+            <button
+                onClick={onBackToList}
+                className="mt-4 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition-colors"
+            >
+                &larr; Back to Tournaments List
+            </button>
+        </div>
+    );
+  }
 
-  useEffect(() => {
-    if (tournament?.status === 'completed') {
-      fetchResults();
-    }
-  }, [tournament?.status, fetchResults]);
-
+  const canManageParticipants = tournament.registration_open;
+  // La generazione dei match potrebbe essere permessa anche se la registrazione è chiusa,
+  // ma non se il torneo è già iniziato o completato (logica più avanzata non implementata qui).
+  // Per ora, permettiamo la generazione se ci sono partecipanti.
+  const canGenerateMatches = participants.length >= 2;
+  const isOwner = currentUser && tournament && tournament.user_id === currentUser.id; // Check if current user is the tournament owner
 
   return (
     <div className="bg-slate-50 p-4 sm:p-6 rounded-xl shadow-2xl space-y-8 border border-slate-200">
@@ -298,7 +291,10 @@ function TournamentDetail({ tournament, onBackToList, globalIsLoading, globalSet
             </div>
         )}
         {tournament.start_date && (
-          <div><strong className="text-slate-600">Date:</strong> <span className="text-slate-800">{new Date(tournament.start_date).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</span></div>
+          <div><strong className="text-slate-600">Start Date:</strong> <span className="text-slate-800">{new Date(tournament.start_date).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</span></div>
+        )}
+        {tournament.end_date && (
+          <div><strong className="text-slate-600">End Date:</strong> <span className="text-slate-800">{new Date(tournament.end_date).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</span></div>
         )}
         {tournament.invitation_link && (
             <div className="sm:col-span-2 md:col-span-3 flex flex-wrap items-center gap-x-2">
@@ -316,11 +312,6 @@ function TournamentDetail({ tournament, onBackToList, globalIsLoading, globalSet
             </div>
         )}
       </div>
-
-      {/* Global Loading/Error for this detail view can be shown here if needed */}
-      {globalIsLoading && (!participants.length && !matches.length) && <p className="text-center text-indigo-600 py-4">Loading tournament details...</p>}
-      {/* globalSetError è gestito in App.js per errori globali, ma potremmo mostrare errori specifici qui */}
-
 
       {/* Global Loading/Error for this detail view can be shown here if needed */}
       {globalIsLoading && (!participants.length && !matches.length) && <p className="text-center text-indigo-600 py-4">Loading tournament details...</p>}
@@ -366,6 +357,13 @@ function TournamentDetail({ tournament, onBackToList, globalIsLoading, globalSet
         />
       </div>
 
+      {/* Leaderboard Section - Only for Round Robin */}
+      {tournament.format === 'round_robin' && tournament.status !== 'open' && (
+        <div className="p-4 sm:p-5 bg-white rounded-lg shadow border border-slate-100 space-y-4">
+          <h3 className="text-xl font-semibold text-slate-800">Leaderboard</h3>
+          <Leaderboard participants={participants} matches={matches} />
+        </div>
+      )}
 
       {/* Match Management Section */}
       <div className="p-4 sm:p-5 bg-white rounded-lg shadow border border-slate-100 space-y-4">
@@ -384,7 +382,6 @@ function TournamentDetail({ tournament, onBackToList, globalIsLoading, globalSet
         {!canGenerateMatches && participants.length < 2 && <p className="text-sm text-slate-500 italic">At least 2 participants are needed to generate matches.</p>}
         {canGenerateMatches && !isOwner && <p className="text-sm text-slate-500 italic">Match generation is managed by the tournament owner.</p>}
 
-
         <MatchList
             matches={matches}
             participants={participants}
@@ -399,7 +396,9 @@ function TournamentDetail({ tournament, onBackToList, globalIsLoading, globalSet
       {tournament.status === 'completed' && (
         <div className="p-4 sm:p-5 bg-white rounded-lg shadow border border-slate-100 space-y-4">
           <h3 className="text-xl font-semibold text-slate-800">Final Results</h3>
-          {results.length > 0 ? (
+          {tournament.format === 'round_robin' ? (
+            <Leaderboard participants={participants} matches={matches} />
+          ) : results.length > 0 ? (
             <ul className="list-disc pl-5">
               {results.map((result, index) => (
                 <li key={index} className="mb-2">

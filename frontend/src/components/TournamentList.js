@@ -28,7 +28,10 @@ function TournamentList({ tournaments, onEdit, onDelete, onView }) { // Rimossi 
               </p>
               {tournament.start_date && (
                 <p className="text-xs sm:text-sm text-gray-500">
-                  Date: <span className="font-semibold text-gray-700">{new Date(tournament.start_date).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                  Start: <span className="font-semibold text-gray-700">{new Date(tournament.start_date).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                  {tournament.end_date && (
+                    <> | End: <span className="font-semibold text-gray-700">{new Date(tournament.end_date).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</span></>
+                  )}
                 </p>
               )}
                <p className="text-xs text-gray-500 mt-1">

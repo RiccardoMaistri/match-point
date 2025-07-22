@@ -20,6 +20,10 @@ class Match(BaseModel):
     winner_id: Optional[str] = None
     score_participant1: Optional[int] = None
     score_participant2: Optional[int] = None
+    set1_score_participant1: Optional[int] = None
+    set1_score_participant2: Optional[int] = None
+    set2_score_participant1: Optional[int] = None
+    set2_score_participant2: Optional[int] = None
     winner_partecipant: Optional[int] = None
     is_bye: bool = False  # Per i bye nei bracket a eliminazione diretta
     status: Literal['pending', 'in_progress', 'completed', 'cancelled'] = 'pending'
@@ -55,6 +59,7 @@ class TournamentCreate(BaseModel):
     tournament_type: Literal['single', 'double']
     format: Literal['elimination', 'round_robin']
     start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
     registration_open: bool = True
     invitation_link: Optional[str] = None
 
@@ -69,6 +74,7 @@ class Tournament(BaseModel):
     tournament_type: Literal['single', 'double']  # singolo o doppio
     format: Literal['elimination', 'round_robin']  # eliminazione diretta o girone all'italiana
     start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
     due_date: Optional[datetime] = None
     participants: List[Participant] = []
     matches: List[Match] = []

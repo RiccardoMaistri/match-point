@@ -5,6 +5,7 @@ const INITIAL_FORM_STATE = {
   tournament_type: 'single',
   format: 'elimination',
   start_date: '',
+  end_date: '',
   // invitation_link: '', // Potrebbe essere generato dal backend
 };
 
@@ -20,6 +21,7 @@ function TournamentForm({ onSubmit, initialData = null, onCancel }) {
         format: initialData.format || 'elimination',
         // La data nel backend è ISO string. Per l'input type="date", serve YYYY-MM-DD.
         start_date: initialData.start_date ? new Date(initialData.start_date).toISOString().split('T')[0] : '',
+        end_date: initialData.end_date ? new Date(initialData.end_date).toISOString().split('T')[0] : '',
       });
       setIsEditing(true);
     } else {
@@ -36,22 +38,27 @@ function TournamentForm({ onSubmit, initialData = null, onCancel }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     const dataToSubmit = { ...formData };
+    
+    // Process start_date
     if (dataToSubmit.start_date) {
-      // Converte YYYY-MM-DD in ISO string completa (aggiungendo orario T00:00:00.000Z)
-      // o considera il fuso orario locale se necessario.
-      // Per semplicità, assumiamo UTC mezzanotte.
       try {
         dataToSubmit.start_date = new Date(dataToSubmit.start_date + 'T00:00:00Z').toISOString();
       } catch (error) {
-        console.error("Error parsing date:", error);
-        // Gestisci l'errore, magari mostrando un messaggio all'utente
-        // Per ora, se la data non è valida, la inviamo così com'è o la omettiamo
-        // delete dataToSubmit.start_date;
+        console.error("Error parsing start date:", error);
       }
     } else {
-      // Se il campo data è vuoto, assicurati che venga inviato come null o omesso,
-      // a seconda di come il backend lo gestisce (Pydantic Optional lo gestisce bene se omesso)
       delete dataToSubmit.start_date;
+    }
+    
+    // Process end_date
+    if (dataToSubmit.end_date) {
+      try {
+        dataToSubmit.end_date = new Date(dataToSubmit.end_date + 'T00:00:00Z').toISOString();
+      } catch (error) {
+        console.error("Error parsing end date:", error);
+      }
+    } else {
+      delete dataToSubmit.end_date;
     }
     onSubmit(dataToSubmit);
     // Non resettare il form qui se si sta editando, il reset avviene in App.js o al cancel.
@@ -115,16 +122,29 @@ function TournamentForm({ onSubmit, initialData = null, onCancel }) {
         </div>
       </div>
 
-      <div>
-        <label htmlFor="start_date" className="block text-sm font-medium text-gray-700 mb-1">Start Date (Optional)</label>
-        <input
-          type="date"
-          name="start_date"
-          id="start_date"
-          value={formData.start_date}
-          onChange={handleChange}
-          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-        />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label htmlFor="start_date" className="block text-sm font-medium text-gray-700 mb-1">Start Date (Optional)</label>
+          <input
+            type="date"
+            name="start_date"
+            id="start_date"
+            value={formData.start_date}
+            onChange={handleChange}
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+          />
+        </div>
+        <div>
+          <label htmlFor="end_date" className="block text-sm font-medium text-gray-700 mb-1">End Date (Optional)</label>
+          <input
+            type="date"
+            name="end_date"
+            id="end_date"
+            value={formData.end_date}
+            onChange={handleChange}
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+          />
+        </div>
       </div>
 
       <div className="flex justify-end space-x-3">
