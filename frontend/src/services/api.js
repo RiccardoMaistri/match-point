@@ -72,6 +72,7 @@ export const createTournament = async (tournamentData) => {
   // Pydantic dovrebbe gestire i default se i campi non sono presenti
   const payload = { ...tournamentData };
   if (!payload.start_date) delete payload.start_date; // Rimuovi se vuoto/nullo
+  if (!payload.end_date) delete payload.end_date; // Rimuovi se vuoto/nullo
 
   return authenticatedFetch(`${API_BASE_URL}/tournaments/`, 'POST', payload);
 };
@@ -79,6 +80,7 @@ export const createTournament = async (tournamentData) => {
 export const updateTournament = async (tournamentId, tournamentData) => {
   const payload = { ...tournamentData };
   if (!payload.start_date) delete payload.start_date;
+  if (!payload.end_date) delete payload.end_date;
 
   return authenticatedFetch(`${API_BASE_URL}/tournaments/${tournamentId}`, 'PUT', payload);
 };
@@ -117,6 +119,14 @@ export const getTournamentMatches = async (tournamentId) => {
 
 export const recordMatchResult = async (tournamentId, matchId, resultData) => {
   return authenticatedFetch(`${API_BASE_URL}/tournaments/${tournamentId}/matches/${matchId}/result`, 'POST', resultData);
+};
+
+export const updateTournamentStatus = async (tournamentId, status) => {
+    return authenticatedFetch(`${API_BASE_URL}/tournaments/${tournamentId}/status`, 'PUT', { status });
+};
+
+export const getTournamentResults = async (tournamentId) => {
+    return authenticatedFetch(`${API_BASE_URL}/tournaments/${tournamentId}/results`, 'GET');
 };
 
 

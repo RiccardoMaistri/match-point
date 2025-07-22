@@ -8,6 +8,10 @@ const getParticipantById = (participantId, participants) => {
 function RecordResultModal({ isOpen, onClose, match, participants, onSubmitResult, tournamentId }) {
   const [score1, setScore1] = useState('');
   const [score2, setScore2] = useState('');
+  const [set1Score1, setSet1Score1] = useState('');
+  const [set1Score2, setSet1Score2] = useState('');
+  const [set2Score1, setSet2Score1] = useState('');
+  const [set2Score2, setSet2Score2] = useState('');
   const [winnerId, setWinnerId] = useState('');
   const [error, setError] = useState('');
 
@@ -18,11 +22,19 @@ function RecordResultModal({ isOpen, onClose, match, participants, onSubmitResul
     if (match) {
       setScore1(match.score_participant1 !== null && match.score_participant1 !== undefined ? String(match.score_participant1) : '');
       setScore2(match.score_participant2 !== null && match.score_participant2 !== undefined ? String(match.score_participant2) : '');
+      setSet1Score1(match.set1_score_participant1 !== null && match.set1_score_participant1 !== undefined ? String(match.set1_score_participant1) : '');
+      setSet1Score2(match.set1_score_participant2 !== null && match.set1_score_participant2 !== undefined ? String(match.set1_score_participant2) : '');
+      setSet2Score1(match.set2_score_participant1 !== null && match.set2_score_participant1 !== undefined ? String(match.set2_score_participant1) : '');
+      setSet2Score2(match.set2_score_participant2 !== null && match.set2_score_participant2 !== undefined ? String(match.set2_score_participant2) : '');
       setWinnerId(match.winner_id || '');
       setError(''); // Resetta l'errore quando il match cambia o il modale si apre/ricarica
     } else {
       setScore1('');
       setScore2('');
+      setSet1Score1('');
+      setSet1Score2('');
+      setSet2Score1('');
+      setSet2Score2('');
       setWinnerId('');
       setError('');
     }
@@ -57,14 +69,36 @@ function RecordResultModal({ isOpen, onClose, match, participants, onSubmitResul
 
     const s1 = score1.trim() === '' ? null : parseInt(score1, 10);
     const s2 = score2.trim() === '' ? null : parseInt(score2, 10);
+    const set1s1 = set1Score1.trim() === '' ? null : parseInt(set1Score1, 10);
+    const set1s2 = set1Score2.trim() === '' ? null : parseInt(set1Score2, 10);
+    const set2s1 = set2Score1.trim() === '' ? null : parseInt(set2Score1, 10);
+    const set2s2 = set2Score2.trim() === '' ? null : parseInt(set2Score2, 10);
 
-    if ((score1.trim() !== '' && isNaN(s1)) || (score2.trim() !== '' && isNaN(s2))) {
-      setError('Scores must be valid numbers or left empty.');
-      return;
-    }
-    if ((s1 !== null && s1 < 0) || (s2 !== null && s2 < 0)) {
-        setError('Scores cannot be negative.');
+    // Validate all scores
+    const allScores = [
+      { value: s1, name: 'Total score for ' + participant1.name },
+      { value: s2, name: 'Total score for ' + participant2.name },
+      { value: set1s1, name: 'Set 1 score for ' + participant1.name },
+      { value: set1s2, name: 'Set 1 score for ' + participant2.name },
+      { value: set2s1, name: 'Set 2 score for ' + participant1.name },
+      { value: set2s2, name: 'Set 2 score for ' + participant2.name }
+    ];
+
+    for (const score of allScores) {
+      if (score.value !== null && isNaN(score.value)) {
+        setError(`${score.name} must be a valid number.`);
         return;
+      }
+      if (score.value !== null && score.value < 0) {
+        setError(`${score.name} cannot be negative.`);
+        return;
+      }
+    }
+
+    // Validate set 2 is only provided if set 1 is provided
+    if ((set2s1 !== null || set2s2 !== null) && (set1s1 === null && set1s2 === null)) {
+      setError('Set 1 scores must be provided if Set 2 scores are provided.');
+      return;
     }
 
     if (winnerId && winnerId !== match.participant1_id && winnerId !== match.participant2_id) {
@@ -72,16 +106,13 @@ function RecordResultModal({ isOpen, onClose, match, participants, onSubmitResul
         return;
     }
 
-    // Logica aggiuntiva: se i punteggi sono uguali, il vincitore deve essere specificato
-    // Questo dipende dalle regole del torneo/gioco. Per ora, lo rendiamo opzionale.
-    // if (s1 !== null && s2 !== null && s1 === s2 && !winnerId) {
-    //   setError('For tied scores, please manually select a winner if applicable.');
-    //   return;
-    // }
-
     const resultData = {
       score_participant1: s1,
       score_participant2: s2,
+      set1_score_participant1: set1s1,
+      set1_score_participant2: set1s2,
+      set2_score_participant1: set2s1,
+      set2_score_participant2: set2s2,
       winner_id: winnerId || null,
     };
     onSubmitResult(tournamentId, match.id, resultData);
@@ -109,36 +140,107 @@ function RecordResultModal({ isOpen, onClose, match, participants, onSubmitResul
         <form onSubmit={handleSubmit} className="space-y-5">
           {error && <p className="text-sm text-red-600 bg-red-100 p-3 rounded-md border border-red-300">{error}</p>}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="score1" className="block text-sm font-medium text-slate-600 mb-1">
-                Score ({participant1.name})
-              </label>
-              <input
-                type="number"
-                name="score1"
-                id="score1"
-                value={score1}
-                onChange={(e) => setScore1(e.target.value)}
-                min="0"
-                className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
-                placeholder="e.g., 10"
-              />
+          <div className="space-y-4">
+            <h4 className="text-md font-medium text-slate-700">Total Score</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="score1" className="block text-sm font-medium text-slate-600 mb-1">
+                  Score ({participant1.name})
+                </label>
+                <input
+                  type="number"
+                  name="score1"
+                  id="score1"
+                  value={score1}
+                  onChange={(e) => setScore1(e.target.value)}
+                  min="0"
+                  className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
+                  placeholder="e.g., 2"
+                />
+              </div>
+              <div>
+                <label htmlFor="score2" className="block text-sm font-medium text-slate-600 mb-1">
+                  Score ({participant2.name})
+                </label>
+                <input
+                  type="number"
+                  name="score2"
+                  id="score2"
+                  value={score2}
+                  onChange={(e) => setScore2(e.target.value)}
+                  min="0"
+                  className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
+                  placeholder="e.g., 0"
+                />
+              </div>
             </div>
-            <div>
-              <label htmlFor="score2" className="block text-sm font-medium text-slate-600 mb-1">
-                Score ({participant2.name})
-              </label>
-              <input
-                type="number"
-                name="score2"
-                id="score2"
-                value={score2}
-                onChange={(e) => setScore2(e.target.value)}
-                min="0"
-                className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
-                placeholder="e.g., 8"
-              />
+            
+            <h4 className="text-md font-medium text-slate-700 mt-4">Set 1 (Required)</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="set1Score1" className="block text-sm font-medium text-slate-600 mb-1">
+                  Set 1 ({participant1.name})
+                </label>
+                <input
+                  type="number"
+                  name="set1Score1"
+                  id="set1Score1"
+                  value={set1Score1}
+                  onChange={(e) => setSet1Score1(e.target.value)}
+                  min="0"
+                  className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
+                  placeholder="e.g., 6"
+                />
+              </div>
+              <div>
+                <label htmlFor="set1Score2" className="block text-sm font-medium text-slate-600 mb-1">
+                  Set 1 ({participant2.name})
+                </label>
+                <input
+                  type="number"
+                  name="set1Score2"
+                  id="set1Score2"
+                  value={set1Score2}
+                  onChange={(e) => setSet1Score2(e.target.value)}
+                  min="0"
+                  className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
+                  placeholder="e.g., 4"
+                />
+              </div>
+            </div>
+            
+            <h4 className="text-md font-medium text-slate-700 mt-4">Set 2 (Optional)</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="set2Score1" className="block text-sm font-medium text-slate-600 mb-1">
+                  Set 2 ({participant1.name})
+                </label>
+                <input
+                  type="number"
+                  name="set2Score1"
+                  id="set2Score1"
+                  value={set2Score1}
+                  onChange={(e) => setSet2Score1(e.target.value)}
+                  min="0"
+                  className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
+                  placeholder="e.g., 6"
+                />
+              </div>
+              <div>
+                <label htmlFor="set2Score2" className="block text-sm font-medium text-slate-600 mb-1">
+                  Set 2 ({participant2.name})
+                </label>
+                <input
+                  type="number"
+                  name="set2Score2"
+                  id="set2Score2"
+                  value={set2Score2}
+                  onChange={(e) => setSet2Score2(e.target.value)}
+                  min="0"
+                  className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
+                  placeholder="e.g., 2"
+                />
+              </div>
             </div>
           </div>
 
@@ -172,7 +274,7 @@ function RecordResultModal({ isOpen, onClose, match, participants, onSubmitResul
               onClick={onClose}
               className="w-full sm:w-auto mt-3 sm:mt-0 inline-flex justify-center rounded-md border border-slate-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:text-sm transition-colors"
             >
-              Save Result
+              Cancel
             </button>
           </div>
         </form>
