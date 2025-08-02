@@ -12,7 +12,7 @@ sleep 2
 # Start the frontend
 echo "Starting frontend on port 8080..."
 cd ../frontend-new
-python3 server.py &
+python3 -m http.server 8080 &
 FRONTEND_PID=$!
 
 echo "Backend running on http://localhost:8001"

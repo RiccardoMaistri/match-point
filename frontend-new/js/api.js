@@ -35,14 +35,16 @@ class API {
 
     // Auth endpoints
     async login(email, password) {
-        const formData = new FormData();
+        const formData = new URLSearchParams();
         formData.append('username', email);
         formData.append('password', password);
-        
+
         return this.request('/token', {
             method: 'POST',
-            headers: {},
-            body: formData
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: formData.toString()
         });
     }
 

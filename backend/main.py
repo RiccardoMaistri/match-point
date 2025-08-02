@@ -33,7 +33,7 @@ GOOGLE_CLIENT_SECRET = AUTH_GOOGLE_CLIENT_SECRET
 GOOGLE_REDIRECT_URI = AUTH_GOOGLE_REDIRECT_URI
 # --- End Authentication Settings ---
 
-FRONTEND_BASE_URL = "http://localhost:3000"  # Base URL for the frontend application
+FRONTEND_BASE_URL = "http://localhost:8080"  # Base URL for the frontend application
 
 # Initialize OAuth client (for Google Login)
 oauth = OAuth()
@@ -58,7 +58,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["http://localhost:3000", "http://localhost:8080"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
