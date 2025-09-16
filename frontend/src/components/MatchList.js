@@ -1,6 +1,6 @@
 import React from 'react';
 
-// Funzione helper per trovare il nome di un partecipante dato il suo ID
+// Helper function to find a participant's name by ID
 const getParticipantName = (participantId, participants) => {
   if (!participantId) return 'N/A';
   const participant = participants.find(p => p.id === participantId);
@@ -9,64 +9,72 @@ const getParticipantName = (participantId, participants) => {
 
 function MatchList({ matches, participants, onRecordResult, tournamentId, tournamentFormat, currentUser, tournamentOwnerId }) {
   if (!matches || matches.length === 0) {
-    return <p className="text-sm text-slate-500 italic py-2">No matches have been generated for this tournament yet.</p>;
+    return <p className="text-sm text-gray-500 dark:text-gray-400 italic py-4 text-center">No matches have been generated yet.</p>;
   }
 
+  // Updated status classes with dark mode support
   const getStatusClass = (status) => {
     switch (status) {
-      case 'completed': return 'text-green-600 bg-green-100';
-      case 'in_progress': return 'text-yellow-600 bg-yellow-100';
-      case 'pending': return 'text-slate-600 bg-slate-100';
-      default: return 'text-gray-600 bg-gray-100';
+      case 'completed': return 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300';
+      case 'in_progress': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300';
+      case 'pending': return 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300';
+      default: return 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300';
     }
   };
 
   return (
-    <div className="mt-4"> {/* Aggiunto margine superiore */}
-      {/* Il titolo è già in TournamentDetail, quindi qui possiamo ometterlo o renderlo più piccolo */}
-      {/* <h4 className="text-lg font-semibold text-slate-700 mb-3">
-        {tournamentFormat === 'elimination' ? 'Bracket Matches' : 'Scheduled Matches'}
-        <span className="text-base font-normal text-slate-500"> ({matches.length})</span>
-      </h4> */}
-      <ul className="space-y-3">
-        {matches.map((match, index) => (
+    <div className="pt-4">
+      <ul className="space-y-4">
+        {matches.map((match) => (
           <li
-            key={match.id || index}
-            className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border border-slate-200 hover:shadow-md transition-shadow duration-150"
+            key={match.id}
+            className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg border border-gray-200 dark:border-gray-700 transition-shadow hover:shadow-md"
           >
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center">
-              <div className="mb-2 sm:mb-0 flex-grow">
-                <p className="text-sm sm:text-base font-semibold text-slate-800">
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+              {/* Match Info */}
+              <div className="flex-grow">
+                <p className="text-base font-semibold text-gray-800 dark:text-gray-200">
                   {match.is_bye
                     ? <><span className="font-bold">{getParticipantName(match.participant1_id, participants)}</span> has a BYE</>
-                    : <><span className="font-bold">{getParticipantName(match.participant1_id, participants)}</span> vs <span className="font-bold">{getParticipantName(match.participant2_id, participants)}</span></>
+                    : <>
+                        <span className="font-bold">{getParticipantName(match.participant1_id, participants)}</span>
+                        <span className="text-gray-500 dark:text-gray-400 mx-2">vs</span>
+                        <span className="font-bold">{getParticipantName(match.participant2_id, participants)}</span>
+                      </>
                   }
                 </p>
-                <div className="text-xs text-slate-500 mt-1 space-x-2">
-                  <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${getStatusClass(match.status)}`}>
-                    {match.status.charAt(0).toUpperCase() + match.status.slice(1)}
+                
+                {/* Match Meta */}
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <span className={`inline-block px-2.5 py-0.5 rounded-full font-medium capitalize ${getStatusClass(match.status)}`}>
+                    {match.status.replace('_', ' ')}
                   </span>
-                  {match.round_number && <span>Round: {match.round_number}</span>}
-                  {match.match_number && <span>Match: {match.match_number}</span>}
+                  {match.round_number && <span>Round: <span className="font-medium text-gray-700 dark:text-gray-300">{match.round_number}</span></span>}
+                  {match.match_number && <span>Match: <span className="font-medium text-gray-700 dark:text-gray-300">{match.match_number}</span></span>}
                 </div>
 
+                {/* Completed Match Info */}
                 {match.status === 'completed' && !match.is_bye && (
-                  <p className="text-xs text-slate-600 mt-1">
-                    Score: <span className="font-semibold">{match.score_participant1 ?? '-'}</span> - <span className="font-semibold">{match.score_participant2 ?? '-'}</span>
-                    {match.winner_id && <span className="ml-2">Winner: <span className="font-semibold">{getParticipantName(match.winner_id, participants)}</span></span>}
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">
+                    Score: <span className="font-semibold">{match.score_participant1 ?? 'N/A'}</span> - <span className="font-semibold">{match.score_participant2 ?? 'N/A'}</span>
+                    {match.winner_id && <span className="ml-4">Winner: <span className="font-bold text-green-600 dark:text-green-400">{getParticipantName(match.winner_id, participants)}</span></span>}
                   </p>
                 )}
               </div>
+
+              {/* Action Button */}
               {!match.is_bye && match.status !== 'completed' && onRecordResult &&
                 (currentUser?.id === tournamentOwnerId ||
                  match.participant1_id === currentUser?.id ||
                  match.participant2_id === currentUser?.id) && (
-                <button
-                  onClick={() => onRecordResult(tournamentId, match.id)}
-                  className="mt-2 sm:mt-0 sm:ml-4 px-3 py-1.5 text-xs font-medium text-white bg-indigo-500 rounded-md hover:bg-indigo-600 transition-colors self-start sm:self-center"
-                >
-                  Record Result
-                </button>
+                <div className="flex-shrink-0 self-start sm:self-center">
+                    <button
+                      onClick={() => onRecordResult(tournamentId, match.id)}
+                      className="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-sm transition-colors"
+                    >
+                      Record Result
+                    </button>
+                </div>
               )}
             </div>
           </li>
