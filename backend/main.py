@@ -251,32 +251,6 @@ async def delete_tournament(
 # --- Endpoints Partecipanti (da implementare) ---
 # Questi endpoint agiranno su un torneo specifico
 
-@app.post("/tournaments/{tournament_id}/participants/", response_model=Participant, status_code=status.HTTP_201_CREATED,
-          summary="Aggiungi un partecipante a un torneo")
-async def add_participant_to_tournament(
-        tournament_id: str = Path(..., description="ID del torneo"),
-        participant_data: Participant = Body(...)
-):
-    tournament_dict = get_tournament_db(tournament_id)
-    if not tournament_dict:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found")
-
-    tournament = Tournament(**tournament_dict)
-
-    # Verifica se il partecipante (basato sull'email, per esempio) esiste già
-    for p in tournament.participants:
-        if p.email == participant_data.email:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                                detail=f"Participant with email {participant_data.email} already registered.")
-
-    # Il modello Participant già assegna un ID
-    new_participant = Participant(**participant_data.model_dump())
-    tournament.participants.append(new_participant)
-
-    update_tournament_db(tournament_id, tournament.model_dump())
-    return new_participant
-
-
 @app.get("/tournaments/{tournament_id}/participants/", response_model=List[Participant],
          summary="Ottieni i partecipanti di un torneo")
 async def get_tournament_participants(tournament_id: str = Path(..., description="ID del torneo")):

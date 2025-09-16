@@ -231,7 +231,7 @@ function TournamentDetail({ tournament, refetchTournament, onBackToList, globalI
               <strong className="text-gray-600 dark:text-gray-400">Invitation Link:</strong>
               <div className="flex items-center gap-2 p-2 bg-gray-100 dark:bg-gray-900 rounded-lg">
                 <a href={tournament.invitation_link} target="_blank" rel="noopener noreferrer" className="text-indigo-600 dark:text-indigo-400 hover:underline break-all text-xs sm:text-sm">{tournament.invitation_link}</a>
-                {isOwner && <button onClick={handleShareInviteLink} className="px-3 py-1 text-xs font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700">Share</button>}
+                {isOwner && <button onClick={handleShareInviteLink} className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700">Share</button>}
               </div>
             </div>
           )}
@@ -242,7 +242,6 @@ function TournamentDetail({ tournament, refetchTournament, onBackToList, globalI
       <Section title="Participants" isLoading={isDetailsLoading}>
         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 flex-wrap">
           <p className="text-sm text-gray-600 dark:text-gray-400">Manage who is competing in the tournament.</p>
-          {!showParticipantForm && canManageParticipants && isOwner && <button onClick={() => setShowParticipantForm(true)} className="px-4 py-2 text-sm font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors">+ Add Participant</button>}
         </div>
         {showParticipantForm && canManageParticipants && isOwner && <ParticipantForm tournamentId={tournament.id} onSubmit={handleAddParticipant} onCancel={() => { setShowParticipantForm(false); globalSetError(null);}} existingParticipants={participants} />}
         {!canManageParticipants && <p className="text-sm text-orange-600 bg-orange-100 dark:bg-orange-900/50 dark:text-orange-300 p-3 rounded-lg border border-orange-200 dark:border-orange-800">Registration for this tournament is closed.</p>}
