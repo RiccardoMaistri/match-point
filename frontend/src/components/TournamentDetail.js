@@ -188,7 +188,7 @@ function TournamentDetail({ tournament, refetchTournament, onBackToList, globalI
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div>
           <h2 className="text-3xl font-bold text-gray-900 dark:text-white leading-tight">{tournament.name}</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">ID: {tournament.id} {isOwner && "(Owned by you)"}</p>
+          {isOwner && <p className="text-sm text-gray-500 dark:text-gray-400">(Owned by you)</p>}
         </div>
         <button onClick={onBackToList} className="self-start sm:self-center px-4 py-2 text-sm font-semibold text-gray-800 dark:text-gray-200 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
           &larr; Back to List
@@ -217,9 +217,6 @@ function TournamentDetail({ tournament, refetchTournament, onBackToList, globalI
       </Section>
 
       <Section title="Participants" isLoading={isDetailsLoading}>
-        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 flex-wrap">
-          <p className="text-sm text-gray-600 dark:text-gray-400">Manage who is competing in the tournament.</p>
-        </div>
         {showParticipantForm && canManageParticipants && isOwner && <ParticipantForm tournamentId={tournament.id} onSubmit={handleAddParticipant} onCancel={() => { setShowParticipantForm(false); globalSetError(null);}} existingParticipants={participants} />}
         {!canManageParticipants && <p className="text-sm text-orange-600 bg-orange-100 dark:bg-orange-900/50 dark:text-orange-300 p-3 rounded-lg border border-orange-200 dark:border-orange-800">Registration for this tournament is closed.</p>}
         <ParticipantList participants={participants} tournamentId={tournament.id} onRemoveParticipant={canManageParticipants && isOwner ? handleRemoveParticipant : null} />

@@ -7,7 +7,7 @@ function ParticipantList({ participants, tournamentId, onRemoveParticipant }) {
 
   return (
     <div className="space-y-3 pt-4">
-      <h4 className="text-md font-semibold text-gray-700 dark:text-gray-300">Registered Participants ({participants.length})</h4>
+      <h4 className="text-md font-semibold text-gray-700 dark:text-gray-300">Participants ({participants.length})</h4>
       <ul className="space-y-3">
         {participants.map((participant) => (
           <li 
