@@ -12,14 +12,14 @@ function TournamentDetail({ tournament, refetchTournament, onBackToList, globalI
   const [shareFeedback, setShareFeedback] = useState('');
   const [showParticipantForm, setShowParticipantForm] = useState(false);
   const [results, setResults] = useState([]);
-  const [isDetailsLoading, setIsDetailsLoading] = useState(true); // BUG FIX: Local loading state
+  const [isDetailsLoading, setIsDetailsLoading] = useState(true);
 
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
   const [currentMatchForResult, setCurrentMatchForResult] = useState(null);
 
   const fetchParticipantsAndMatches = useCallback(async () => {
     if (!tournament?.id) return;
-    setIsDetailsLoading(true); // Use local state
+    setIsDetailsLoading(true);
     try {
       const [participantsData, matchesData] = await Promise.all([
         api.getTournamentParticipants(tournament.id),
@@ -30,9 +30,9 @@ function TournamentDetail({ tournament, refetchTournament, onBackToList, globalI
     } catch (err) {
       globalSetError(err.message || `Failed to fetch tournament details`);
     } finally {
-      setIsDetailsLoading(false); // Use local state
+      setIsDetailsLoading(false);
     }
-  }, [tournament?.id, globalSetError]); // BUG FIX: Simplified dependencies
+  }, [tournament?.id, globalSetError]);
 
   const fetchResults = useCallback(async () => {
     if (!tournament?.id) return;
@@ -45,7 +45,7 @@ function TournamentDetail({ tournament, refetchTournament, onBackToList, globalI
     } finally {
       setIsDetailsLoading(false);
     }
-  }, [tournament?.id, globalSetError]); // BUG FIX: Simplified dependencies
+  }, [tournament?.id, globalSetError]);
 
   useEffect(() => {
     fetchParticipantsAndMatches();
@@ -58,7 +58,7 @@ function TournamentDetail({ tournament, refetchTournament, onBackToList, globalI
   }, [tournament?.status, fetchResults]);
 
   const handleAddParticipant = async (tournamentId, participantData) => {
-    globalSetIsLoading(true); // Use global loading for actions
+    globalSetIsLoading(true);
     try {
       await api.addParticipantToTournament(tournamentId, participantData);
       await fetchParticipantsAndMatches();
@@ -122,6 +122,7 @@ function TournamentDetail({ tournament, refetchTournament, onBackToList, globalI
       const result = await api.generateMatches(tournament.id);
       alert(result.message || "Matches generated successfully!");
       await fetchParticipantsAndMatches();
+      await refetchTournament(); // Refetch tournament to get the new status
     } catch (err) {
       globalSetError(err.message || 'Failed to generate matches');
     } finally {
@@ -148,20 +149,6 @@ function TournamentDetail({ tournament, refetchTournament, onBackToList, globalI
       alert('Match result recorded successfully!');
     } catch (err) {
       globalSetError(err.message || 'Failed to record match result.');
-    } finally {
-      globalSetIsLoading(false);
-    }
-  };
-
-  const handleStatusChange = async (newStatus) => {
-    if (!tournament?.id) return;
-    globalSetIsLoading(true);
-    try {
-      await api.updateTournamentStatus(tournament.id, newStatus);
-      alert("Tournament status updated successfully!");
-      await refetchTournament();
-    } catch (err) {
-      globalSetError(err.message || 'Failed to update tournament status');
     } finally {
       globalSetIsLoading(false);
     }
@@ -216,16 +203,6 @@ function TournamentDetail({ tournament, refetchTournament, onBackToList, globalI
           <div className="flex items-center gap-2"><strong className="text-gray-600 dark:text-gray-400">Status:</strong> <span className={`px-2 py-0.5 text-xs rounded-full font-semibold ${statusColors[tournament.status]}`}>{tournament.status.replace('_', ' ')}</span></div>
           {tournament.start_date && <div className="flex flex-col"><strong className="text-gray-600 dark:text-gray-400">Start Date:</strong> <span className="text-gray-800 dark:text-gray-200">{new Date(tournament.start_date).toLocaleDateString()}</span></div>}
           {tournament.end_date && <div className="flex flex-col"><strong className="text-gray-600 dark:text-gray-400">End Date:</strong> <span className="text-gray-800 dark:text-gray-200">{new Date(tournament.end_date).toLocaleDateString()}</span></div>}
-          {isOwner && (
-            <div className="sm:col-span-2 md:col-span-3 flex flex-wrap items-center gap-2">
-              <strong className="text-gray-600 dark:text-gray-400">Change Status:</strong>
-              <select value={tournament.status} onChange={(e) => handleStatusChange(e.target.value)} className="p-1 border rounded-md bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500">
-                <option value="open">Open</option>
-                <option value="in_progress">In Progress</option>
-                <option value="completed">Completed</option>
-              </select>
-            </div>
-          )}
           {tournament.invitation_link && (
             <div className="sm:col-span-2 md:col-span-3 flex flex-wrap items-center gap-x-4 gap-y-2">
               <strong className="text-gray-600 dark:text-gray-400">Invitation Link:</strong>
@@ -255,13 +232,21 @@ function TournamentDetail({ tournament, refetchTournament, onBackToList, globalI
       )}
 
       <Section title={`Matches / ${tournament.format === 'elimination' ? 'Bracket' : 'Schedule'}`} isLoading={isDetailsLoading}>
-        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
-          <p className="text-sm text-gray-600 dark:text-gray-400">Generate and manage matches.</p>
-          {canGenerateMatches && isOwner && <button onClick={handleGenerateMatches} disabled={globalIsLoading} className="px-4 py-2 text-sm font-semibold text-white bg-cyan-600 rounded-lg hover:bg-cyan-700 disabled:bg-gray-400 transition-colors">{globalIsLoading ? 'Processing...' : (matches.length > 0 ? 'Regenerate Matches' : 'Generate Matches')}</button>}
-        </div>
-        {!canGenerateMatches && participants.length < 2 && <p className="text-sm text-gray-500 dark:text-gray-400 italic">At least 2 participants are needed to generate matches.</p>}
-        {canGenerateMatches && !isOwner && <p className="text-sm text-gray-500 dark:text-gray-400 italic">Match generation is managed by the tournament owner.</p>}
-        <MatchList matches={matches} participants={participants} onRecordResult={(tId, mId) => openRecordResultModal(mId)} tournamentId={tournament.id} tournamentFormat={tournament.format} currentUser={currentUser} tournamentOwnerId={tournament.user_id} />
+        {isOwner && (
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-4">
+            <p className="text-sm text-gray-600 dark:text-gray-400">Generate and manage matches.</p>
+            {canGenerateMatches ? (
+              <button onClick={handleGenerateMatches} disabled={globalIsLoading} className="px-4 py-2 text-sm font-semibold text-white bg-cyan-600 rounded-lg hover:bg-cyan-700 disabled:bg-gray-400 transition-colors">
+                {globalIsLoading ? 'Processing...' : (matches.length > 0 ? 'Regenerate Matches' : 'Generate Matches')}
+              </button>
+            ) : (
+              <p className="text-sm text-gray-500 dark:text-gray-400 italic">
+                At least 2 participants are needed to generate matches.
+              </p>
+            )}
+          </div>
+        )}
+        <MatchList matches={matches} participants={participants} onRecordResult={(tId, mId) => openRecordResultModal(mId)} tournamentId={tournament.id} tournamentFormat={tournament.format} currentUser={currentUser} />
       </Section>
 
       {tournament.status === 'completed' && (

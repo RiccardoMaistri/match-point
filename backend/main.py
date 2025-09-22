@@ -194,36 +194,6 @@ async def update_tournament(
     return Tournament(**tournament_db)
 
 
-@app.put("/tournaments/{tournament_id}/status", response_model=Tournament, status_code=status.HTTP_200_OK,
-         summary="Aggiorna lo stato di un torneo")
-async def update_tournament_status(
-        tournament_id: str = Path(..., description="ID del torneo da aggiornare"),
-        status: str = Body(..., embed=True),
-        current_user: User = Depends(get_current_active_user)
-):
-    """
-    Aggiorna lo stato di un torneo. Richiede autenticazione.
-    L'utente deve essere il proprietario del torneo.
-    """
-    existing_tournament_dict = get_tournament_db(tournament_id)
-    if not existing_tournament_dict:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found")
-
-    existing_tournament = Tournament(**existing_tournament_dict)
-
-    if existing_tournament.user_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to update this tournament")
-
-    if status not in ['open', 'in_progress', 'completed']:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid status")
-
-    existing_tournament.status = status
-    tournament_db = update_tournament_db(tournament_id, existing_tournament.model_dump())
-    if not tournament_db:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found during update process")
-    return Tournament(**tournament_db)
-
-
 @app.delete("/tournaments/{tournament_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Elimina un torneo")
 async def delete_tournament(
         tournament_id: str = Path(..., description="ID del torneo da eliminare"),
@@ -272,7 +242,7 @@ async def get_tournament_by_invite_code(
     full_invite_link = f"{FRONTEND_BASE_URL}/join/{invite_code}"
     all_tournaments = get_all_tournaments_db()
     for t_dict in all_tournaments:
-        if t_dict.get("invitation_link") == full_invite_link.replace(FRONTEND_BASE_URL, ''):
+        if t_dict.get("invitation_link") == full_invite_link:
             return Tournament(**t_dict)
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found or invalid invite code.")
 
@@ -348,16 +318,20 @@ async def join_tournament_authenticated(
 # --- Endpoints Match e Risultati (da implementare) ---
 
 @app.post("/tournaments/{tournament_id}/matches/generate", summary="Genera bracket/calendario per un torneo")
-async def generate_matches_for_tournament(tournament_id: str = Path(..., description="ID del torneo")):
-    # TODO: Implementare la logica di generazione bracket/calendario
-    # Questo dipenderà dal formato del torneo (elimination/round_robin)
-    # e dal numero di partecipanti.
-    # Potrebbe usare librerie come bracket-maker o round-robin-tournament.
+async def generate_matches_for_tournament(
+    tournament_id: str = Path(..., description="ID del torneo"),
+    current_user: User = Depends(get_current_active_user)
+):
     tournament_dict = get_tournament_db(tournament_id)
     if not tournament_dict:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found")
 
     tournament = Tournament(**tournament_dict)
+
+    # Authorization check
+    if tournament.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to generate matches for this tournament")
+
     if not tournament.participants or len(tournament.participants) < 2:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="Not enough participants to generate matches.")
@@ -443,8 +417,8 @@ async def record_match_result(
         match_id: str = Path(..., description="ID del match"),
         score_participant1: Optional[int] = Body(None, embed=True),
         score_participant2: Optional[int] = Body(None, embed=True),
-        winner_id: Optional[str] = Body(None, embed=True)
-        # Il client dovrebbe determinare il vincitore o l'API lo deduce
+        winner_id: Optional[str] = Body(None, embed=True),
+        current_user: User = Depends(get_current_active_user)
 ):
     tournament_dict = get_tournament_db(tournament_id)
     if not tournament_dict:
@@ -465,6 +439,24 @@ async def record_match_result(
 
     if match_to_update.is_bye:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot record result for a bye match")
+
+    # Authorization check: only participants of the match can record the result.
+    participant1 = next((p for p in tournament.participants if p.id == match_to_update.participant1_id), None)
+    participant2 = next((p for p in tournament.participants if p.id == match_to_update.participant2_id), None)
+
+    # Create a list of emails of the participants in the match
+    participant_emails = []
+    if participant1:
+        participant_emails.append(participant1.email)
+    if participant2:
+        participant_emails.append(participant2.email)
+
+    # Check if the current user's email is in the list of participant emails
+    if current_user.email not in participant_emails:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not authorized to record results for this match."
+        )
 
     # Aggiorna i punteggi e lo stato
     if score_participant1 is not None:

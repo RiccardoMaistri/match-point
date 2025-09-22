@@ -121,10 +121,6 @@ export const recordMatchResult = async (tournamentId, matchId, resultData) => {
   return authenticatedFetch(`${API_BASE_URL}/tournaments/${tournamentId}/matches/${matchId}/result`, 'POST', resultData);
 };
 
-export const updateTournamentStatus = async (tournamentId, status) => {
-    return authenticatedFetch(`${API_BASE_URL}/tournaments/${tournamentId}/status`, 'PUT', { status });
-};
-
 export const getTournamentResults = async (tournamentId) => {
     return authenticatedFetch(`${API_BASE_URL}/tournaments/${tournamentId}/results`, 'GET');
 };

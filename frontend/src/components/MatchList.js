@@ -25,60 +25,69 @@ function MatchList({ matches, participants, onRecordResult, tournamentId, tourna
   return (
     <div className="pt-4">
       <ul className="space-y-4">
-        {matches.map((match) => (
-          <li
-            key={match.id}
-            className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg border border-gray-200 dark:border-gray-700 transition-shadow hover:shadow-md"
-          >
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
-              {/* Match Info */}
-              <div className="flex-grow">
-                <p className="text-base font-semibold text-gray-800 dark:text-gray-200">
-                  {match.is_bye
-                    ? <><span className="font-bold">{getParticipantName(match.participant1_id, participants)}</span> has a BYE</>
-                    : <>
-                        <span className="font-bold">{getParticipantName(match.participant1_id, participants)}</span>
-                        <span className="text-gray-500 dark:text-gray-400 mx-2">vs</span>
-                        <span className="font-bold">{getParticipantName(match.participant2_id, participants)}</span>
-                      </>
-                  }
-                </p>
-                
-                {/* Match Meta */}
-                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-                  <span className={`inline-block px-2.5 py-0.5 rounded-full font-medium capitalize ${getStatusClass(match.status)}`}>
-                    {match.status.replace('_', ' ')}
-                  </span>
-                  {match.round_number && <span>Round: <span className="font-medium text-gray-700 dark:text-gray-300">{match.round_number}</span></span>}
-                  {match.match_number && <span>Match: <span className="font-medium text-gray-700 dark:text-gray-300">{match.match_number}</span></span>}
+        {matches.map((match) => {
+          // Find participant objects from the participants list
+          const participant1 = participants.find(p => p.id === match.participant1_id);
+          const participant2 = participants.find(p => p.id === match.participant2_id);
+
+          // Check if the current user is one of the participants in the match by comparing emails
+          const isCurrentUserParticipant = currentUser && (
+            (participant1 && participant1.email === currentUser.email) ||
+            (participant2 && participant2.email === currentUser.email)
+          );
+
+          return (
+            <li
+              key={match.id}
+              className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg border border-gray-200 dark:border-gray-700 transition-shadow hover:shadow-md"
+            >
+              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+                {/* Match Info */}
+                <div className="flex-grow">
+                  <p className="text-base font-semibold text-gray-800 dark:text-gray-200">
+                    {match.is_bye
+                      ? <><span className="font-bold">{getParticipantName(match.participant1_id, participants)}</span> has a BYE</>
+                      : <>
+                          <span className="font-bold">{getParticipantName(match.participant1_id, participants)}</span>
+                          <span className="text-gray-500 dark:text-gray-400 mx-2">vs</span>
+                          <span className="font-bold">{getParticipantName(match.participant2_id, participants)}</span>
+                        </>
+                    }
+                  </p>
+                  
+                  {/* Match Meta */}
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <span className={`inline-block px-2.5 py-0.5 rounded-full font-medium capitalize ${getStatusClass(match.status)}`}>
+                      {match.status.replace('_', ' ')}
+                    </span>
+                    {match.round_number && <span>Round: <span className="font-medium text-gray-700 dark:text-gray-300">{match.round_number}</span></span>}
+                    {match.match_number && <span>Match: <span className="font-medium text-gray-700 dark:text-gray-300">{match.match_number}</span></span>}
+                  </div>
+
+                  {/* Completed Match Info */}
+                  {match.status === 'completed' && !match.is_bye && (
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">
+                      Score: <span className="font-semibold">{match.score_participant1 ?? 'N/A'}</span> - <span className="font-semibold">{match.score_participant2 ?? 'N/A'}</span>
+                      {match.winner_id && <span className="ml-4">Winner: <span className="font-bold text-green-600 dark:text-green-400">{getParticipantName(match.winner_id, participants)}</span></span>}
+                    </p>
+                  )}
                 </div>
 
-                {/* Completed Match Info */}
-                {match.status === 'completed' && !match.is_bye && (
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">
-                    Score: <span className="font-semibold">{match.score_participant1 ?? 'N/A'}</span> - <span className="font-semibold">{match.score_participant2 ?? 'N/A'}</span>
-                    {match.winner_id && <span className="ml-4">Winner: <span className="font-bold text-green-600 dark:text-green-400">{getParticipantName(match.winner_id, participants)}</span></span>}
-                  </p>
+                {/* Action Button */}
+                {!match.is_bye && match.status !== 'completed' && onRecordResult && isCurrentUserParticipant && (
+                  <div className="flex-shrink-0 self-start sm:self-center">
+                      <button
+                        onClick={() => onRecordResult(tournamentId, match.id)}
+                        className="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-sm transition-colors"
+                      >
+                        Record Result
+                      </button>
+                  </div>
                 )}
               </div>
-
-              {/* Action Button */}
-              {!match.is_bye && match.status !== 'completed' && onRecordResult &&
-                (currentUser?.id === tournamentOwnerId ||
-                 match.participant1_id === currentUser?.id ||
-                 match.participant2_id === currentUser?.id) && (
-                <div className="flex-shrink-0 self-start sm:self-center">
-                    <button
-                      onClick={() => onRecordResult(tournamentId, match.id)}
-                      className="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-sm transition-colors"
-                    >
-                      Record Result
-                    </button>
-                </div>
-              )}
-            </div>
-          </li>
-        ))}
+            </li>
+          );
+        })}
       </ul>
     </div>
   );
