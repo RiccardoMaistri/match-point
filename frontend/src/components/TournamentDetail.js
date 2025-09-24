@@ -53,7 +53,7 @@ function TournamentDetail({ currentUser }) {
       })
         .then(() => console.log('Successful share'))
         .catch((error) => console.log('Error sharing', error));
-    } else if (navigator.clipboard && navigator.clipboard.writeText) {
+    } else {
       navigator.clipboard.writeText(tournamentLink)
         .then(() => {
           alert('Tournament link copied to clipboard!');
@@ -62,29 +62,6 @@ function TournamentDetail({ currentUser }) {
           console.error('Failed to copy: ', err);
           alert('Failed to copy tournament link.');
         });
-    } else {
-      // Fallback for older browsers
-      const textArea = document.createElement("textarea");
-      textArea.value = tournamentLink;
-      // Avoid scrolling to bottom
-      textArea.style.top = "0";
-      textArea.style.left = "0";
-      textArea.style.position = "fixed";
-      document.body.appendChild(textArea);
-      textArea.focus();
-      textArea.select();
-      try {
-        const successful = document.execCommand('copy');
-        if (successful) {
-          alert('Tournament link copied to clipboard!');
-        } else {
-          alert('Failed to copy tournament link.');
-        }
-      } catch (err) {
-        console.error('Fallback: Oops, unable to copy', err);
-        alert('Failed to copy tournament link.');
-      }
-      document.body.removeChild(textArea);
     }
   };
 
