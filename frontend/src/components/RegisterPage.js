@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 
 const RegisterPage = ({ onRegister, error, isLoading }) => {
   const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -16,11 +17,11 @@ const RegisterPage = ({ onRegister, error, isLoading }) => {
       setFormError("Passwords don't match.");
       return;
     }
-    if (!email || !password || !name) {
+    if (!email || !password || !name || !username) {
       setFormError('Please fill in all required fields.');
       return;
     }
-    onRegister({ name, email, password });
+    onRegister({ name, username, email, password });
   };
 
   const inputClasses = "mt-1 block w-full px-4 py-3 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary sm:text-sm";
@@ -51,6 +52,22 @@ const RegisterPage = ({ onRegister, error, isLoading }) => {
               required
               disabled={isLoading}
               placeholder="John Doe"
+            />
+          </div>
+
+          <div>
+            <label className={labelClasses} htmlFor="register-username">
+              Username
+            </label>
+            <input
+              type="text"
+              id="register-username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className={inputClasses}
+              required
+              disabled={isLoading}
+              placeholder="yourusername"
             />
           </div>
 

@@ -47,11 +47,11 @@ function App() {
     verifyTokenAndFetchUser();
   }, []);
 
-  const handleLogin = async (email, password) => {
+  const handleLogin = async (usernameOrEmail, password) => {
     setIsAuthLoading(true);
     setAuthError(null);
     try {
-      const loginData = await api.loginUser(email, password);
+      const loginData = await api.loginUser(usernameOrEmail, password);
       localStorage.setItem('authToken', loginData.access_token);
       const userDetails = await api.getCurrentUserDetails();
       setCurrentUser(userDetails);
@@ -200,7 +200,7 @@ function App() {
   return (
     <div className="relative flex size-full min-h-screen flex-col justify-between group/design-root overflow-x-hidden bg-background">
       <div className="flex-grow">
-        <Header title="My Tournaments" onAdd={() => setShowCreateForm(true)} />
+        <Header title="My Tournaments" />
         {showCreateForm && (
           <TournamentForm
             onSubmit={editingTournament ? handleUpdateTournamentSubmit : handleCreateTournamentSubmit}
@@ -271,7 +271,7 @@ function App() {
           </Routes>
         </main>
       </div>
-      {currentUser && <BottomNav />}
+      {currentUser && <BottomNav onAdd={() => setShowCreateForm(true)} />}
     </div>
   );
 }

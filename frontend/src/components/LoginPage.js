@@ -2,15 +2,15 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 const LoginPage = ({ onLogin, error, isLoading }) => {
-  const [email, setEmail] = useState('');
+  const [usernameOrEmail, setUsernameOrEmail] = useState('');
   const [password, setPassword] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!email || !password) {
+    if (!usernameOrEmail || !password) {
       return;
     }
-    onLogin(email, password);
+    onLogin(usernameOrEmail, password);
   };
 
   const inputClasses = "mt-1 block w-full px-4 py-3 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary sm:text-sm";
@@ -30,17 +30,17 @@ const LoginPage = ({ onLogin, error, isLoading }) => {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label className={labelClasses} htmlFor="login-email">
-              Email Address
+              Email or Username
             </label>
             <input
-              type="email"
+              type="text"
               id="login-email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={usernameOrEmail}
+              onChange={(e) => setUsernameOrEmail(e.target.value)}
               className={inputClasses}
               required
               disabled={isLoading}
-              placeholder="you@example.com"
+              placeholder="you@example.com or yourusername"
             />
           </div>
 
