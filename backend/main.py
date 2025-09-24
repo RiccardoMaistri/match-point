@@ -1,25 +1,21 @@
 import uuid  # For generating invitation links and possibly other IDs if needed
 from authlib.integrations.starlette_client import OAuth
 from datetime import timedelta
-from fastapi import Body, Depends, FastAPI, HTTPException, Path, Request, \
-    status  # To use Depends for get_current_active_user; For Google OAuth
+from fastapi import Body, Depends, FastAPI, HTTPException, Path, Request,     status  # To use Depends for get_current_active_user; For Google OAuth
 from fastapi.responses import RedirectResponse  # For Google OAuth
 from fastapi.security import OAuth2PasswordRequestForm
 from typing import List, Optional
 
 # Import auth related things
-from auth import (ACCESS_TOKEN_EXPIRE_MINUTES as AUTH_ACCESS_TOKEN_EXPIRE_MINUTES, ALGORITHM as AUTH_ALGORITHM,
+from .auth import (ACCESS_TOKEN_EXPIRE_MINUTES as AUTH_ACCESS_TOKEN_EXPIRE_MINUTES, ALGORITHM as AUTH_ALGORITHM,
                   GOOGLE_CLIENT_ID as AUTH_GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET as AUTH_GOOGLE_CLIENT_SECRET,
                   GOOGLE_REDIRECT_URI as AUTH_GOOGLE_REDIRECT_URI, SECRET_KEY as AUTH_SECRET_KEY, Token,
                   create_access_token, get_current_active_user, get_optional_current_active_user, get_password_hash,
                   verify_password)  # Rename to avoid clash if main.py has its own SECRET_KEY; oauth2_scheme, # We might define this in main or use from auth; create_access_token,; We might define this in main or use from auth; For protecting routes; For optional user on public routes; Make sure Token model is imported from auth; For password flow; For user creation later
 # Placeholder for database user functions - will be replaced by actual db calls
-from database import create_tournament_db, create_user_db, delete_tournament_db, get_all_tournaments_db, \
-    get_tournament_db, get_user_by_email_db, update_tournament_db, \
-    update_user_db  # This function needs to be created in database.py
+from .database import create_tournament_db, create_user_db, delete_tournament_db, get_all_tournaments_db,     get_tournament_db, get_user_by_email_db, update_tournament_db,     update_user_db  # This function needs to be created in database.py
 # We will add user related db functions later
-from models import Match, Participant, Tournament, TournamentCreate, User, \
-    UserCreate  # Import User and UserCreate model
+from .models import Match, Participant, Tournament, TournamentCreate, User,     UserCreate  # Import User and UserCreate model
 
 # --- Authentication Settings ---
 # These would ideally come from environment variables or a config file
