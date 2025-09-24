@@ -59,107 +59,109 @@ function TournamentForm({ onSubmit, initialData = null, onCancel }) {
     onSubmit(dataToSubmit);
   };
 
-  const inputClasses = "mt-1 block w-full px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors";
-  const labelClasses = "block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1";
+  const inputClasses = "mt-1 block w-full px-4 py-3 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary sm:text-sm";
+  const labelClasses = "block text-sm font-medium text-primary-text mb-1";
 
   return (
-    <div className="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-xl shadow-lg border border-transparent dark:border-gray-700">
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">{isEditing ? 'Edit Tournament' : 'Create New Tournament'}</h3>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-background p-6 sm:p-8 rounded-xl shadow-lg w-full max-w-lg">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <h3 className="text-2xl font-bold text-primary-text mb-6">{isEditing ? 'Edit Tournament' : 'Create New Tournament'}</h3>
 
-        <div>
-          <label htmlFor="name" className={labelClasses}>
-            Tournament Name <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            name="name"
-            id="name"
-            value={formData.name}
-            onChange={handleChange}
-            required
-            className={inputClasses}
-            placeholder="e.g., Summer Championship 2024"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label htmlFor="tournament_type" className={labelClasses}>
-              Type <span className="text-red-500">*</span>
+            <label htmlFor="name" className={labelClasses}>
+              Tournament Name <span className="text-red-500">*</span>
             </label>
-            <select
-              name="tournament_type"
-              id="tournament_type"
-              value={formData.tournament_type}
-              onChange={handleChange}
-              className={inputClasses}
-            >
-              <option value="single">Single (e.g., Tennis Singles)</option>
-              <option value="double">Double (e.g., Tennis Doubles)</option>
-            </select>
-          </div>
-
-          <div>
-            <label htmlFor="format" className={labelClasses}>
-              Format <span className="text-red-500">*</span>
-            </label>
-            <select
-              name="format"
-              id="format"
-              value={formData.format}
-              onChange={handleChange}
-              className={inputClasses}
-            >
-              <option value="elimination">Direct Elimination</option>
-              <option value="round_robin">Round Robin</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label htmlFor="start_date" className={labelClasses}>Start Date (Optional)</label>
             <input
-              type="date"
-              name="start_date"
-              id="start_date"
-              value={formData.start_date}
+              type="text"
+              name="name"
+              id="name"
+              value={formData.name}
               onChange={handleChange}
+              required
               className={inputClasses}
+              placeholder="e.g., Summer Championship 2024"
             />
           </div>
-          <div>
-            <label htmlFor="end_date" className={labelClasses}>End Date (Optional)</label>
-            <input
-              type="date"
-              name="end_date"
-              id="end_date"
-              value={formData.end_date}
-              onChange={handleChange}
-              className={inputClasses}
-            />
-          </div>
-        </div>
 
-        <div className="flex justify-end space-x-4 pt-4">
-          {onCancel && (
-              <button
-                  type="button"
-                  onClick={onCancel}
-                  className="px-6 py-2 text-sm font-semibold text-gray-800 dark:text-gray-200 bg-gray-200 dark:bg-gray-600 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 dark:focus:ring-offset-gray-800 transition-colors"
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label htmlFor="tournament_type" className={labelClasses}>
+                Type <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="tournament_type"
+                id="tournament_type"
+                value={formData.tournament_type}
+                onChange={handleChange}
+                className={inputClasses}
               >
-                  Cancel
-              </button>
-          )}
-          <button
-            type="submit"
-            className="px-6 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 shadow-sm transition-colors"
-          >
-            {isEditing ? 'Save Changes' : 'Create Tournament'}
-          </button>
-        </div>
-      </form>
+                <option value="single">Single (e.g., Tennis Singles)</option>
+                <option value="double">Double (e.g., Tennis Doubles)</option>
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="format" className={labelClasses}>
+                Format <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="format"
+                id="format"
+                value={formData.format}
+                onChange={handleChange}
+                className={inputClasses}
+              >
+                <option value="elimination">Direct Elimination</option>
+                <option value="round_robin">Round Robin</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label htmlFor="start_date" className={labelClasses}>Start Date (Optional)</label>
+              <input
+                type="date"
+                name="start_date"
+                id="start_date"
+                value={formData.start_date}
+                onChange={handleChange}
+                className={inputClasses}
+              />
+            </div>
+            <div>
+              <label htmlFor="end_date" className={labelClasses}>End Date (Optional)</label>
+              <input
+                type="date"
+                name="end_date"
+                id="end_date"
+                value={formData.end_date}
+                onChange={handleChange}
+                className={inputClasses}
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end space-x-4 pt-4">
+            {onCancel && (
+                <button
+                    type="button"
+                    onClick={onCancel}
+                    className="px-6 py-2 text-sm font-semibold text-secondary-text bg-accent rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
+                >
+                    Cancel
+                </button>
+            )}
+            <button
+              type="submit"
+              className="px-6 py-2 text-sm font-semibold text-white bg-primary rounded-lg hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary shadow-sm transition-colors"
+            >
+              {isEditing ? 'Save Changes' : 'Create Tournament'}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

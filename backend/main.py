@@ -4,8 +4,8 @@ from datetime import timedelta
 from fastapi import Body, Depends, FastAPI, HTTPException, Path, Request, \
     status  # To use Depends for get_current_active_user; For Google OAuth
 from fastapi.responses import RedirectResponse  # For Google OAuth
-from fastapi.security import OAuth2PasswordRequestForm
-from typing import List, Optional
+from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
+from typing import List, Optional, Set
 
 # Import auth related things
 from auth import (ACCESS_TOKEN_EXPIRE_MINUTES as AUTH_ACCESS_TOKEN_EXPIRE_MINUTES, ALGORITHM as AUTH_ALGORITHM,
@@ -34,6 +34,19 @@ GOOGLE_REDIRECT_URI = AUTH_GOOGLE_REDIRECT_URI
 # --- End Authentication Settings ---
 
 FRONTEND_BASE_URL = "http://192.168.3.62:3000"  # Base URL for the frontend application
+
+# Token blacklist (for logout)
+blacklisted_tokens: Set[str] = set()
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+
+# Dependency to check for blacklisted tokens
+def check_if_token_is_blacklisted(token: str = Depends(oauth2_scheme)):
+    if token in blacklisted_tokens:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has been revoked")
+    return token
+
 
 # Initialize OAuth client (for Google Login)
 oauth = OAuth()
@@ -798,6 +811,12 @@ async def register_user(user_in: UserCreate):
     # Return the created user, conforming to the response_model=User
     # Pydantic will validate the created_user_dict against the User model.
     return User(**created_user_dict)
+
+
+@app.post("/logout", summary="Logout user and invalidate token")
+async def logout(token: str = Depends(check_if_token_is_blacklisted)):
+    blacklisted_tokens.add(token)
+    return {"message": "Successfully logged out"}
 
 
 #

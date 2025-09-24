@@ -16,8 +16,8 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 # Configuration for Google OAuth (to be moved to a config file or env vars)
-GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID"  # Replace with your Google Client ID
-GOOGLE_CLIENT_SECRET = "YOUR_GOOGLE_CLIENT_SECRET"  # Replace with your Google Client Secret
+GOOGLE_CLIENT_ID = "PLACEHOLDER_CLIENT_ID"  # Replace with your Google Client ID
+GOOGLE_CLIENT_SECRET = "PLACEHOLDER_CLIENT_SECRET"  # Replace with your Google Client Secret
 # This should match the authorized redirect URI in your Google Cloud Console
 GOOGLE_REDIRECT_URI = "http://localhost:8001/auth/google"
 

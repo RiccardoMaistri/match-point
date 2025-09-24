@@ -23,16 +23,16 @@ const RegisterPage = ({ onRegister, error, isLoading }) => {
     onRegister({ name, email, password });
   };
 
-  const inputClasses = "mt-1 block w-full px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm transition-colors disabled:opacity-50";
-  const labelClasses = "block text-sm font-medium text-gray-700 dark:text-gray-300";
+  const inputClasses = "mt-1 block w-full px-4 py-3 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary sm:text-sm";
+  const labelClasses = "block text-sm font-medium text-primary-text";
 
   return (
-    <div className="max-w-md mx-auto mt-8 sm:mt-12">
-      <div className="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
-        <h2 className="text-3xl font-bold text-center text-gray-900 dark:text-white mb-6">Create Account</h2>
+    <div className="max-w-md mx-auto mt-8 sm:mt-12 p-4">
+      <div className="bg-background p-6 sm:p-8 rounded-xl shadow-lg">
+        <h2 className="text-3xl font-bold text-center text-primary-text mb-6">Create Account</h2>
         
         {(error || formError) && (
-          <div className="bg-red-100 dark:bg-red-900/50 border border-red-400 dark:border-red-600 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg relative mb-6" role="alert">
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-6" role="alert">
             <span className="block sm:inline">{error || formError}</span>
           </div>
         )}
@@ -107,7 +107,7 @@ const RegisterPage = ({ onRegister, error, isLoading }) => {
           <div className="pt-2">
             <button
               type="submit"
-              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 disabled:bg-indigo-400 transition-colors"
+              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-primary hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:bg-opacity-50 transition-colors"
               disabled={isLoading}
             >
               {isLoading ? 'Registering...' : 'Create Account'}
@@ -115,8 +115,8 @@ const RegisterPage = ({ onRegister, error, isLoading }) => {
           </div>
         </form>
 
-        <p className="text-center text-sm text-gray-600 dark:text-gray-400 mt-8">
-          Already have an account? <Link to="/login" className="font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300">Login here</Link>.
+        <p className="text-center text-sm text-secondary-text mt-8">
+          Already have an account? <Link to="/login" className="font-medium text-primary hover:text-primary-hover">Login here</Link>.
         </p>
       </div>
     </div>

@@ -1,6 +1,7 @@
 import json
 import os
 import uuid  # For generating IDs
+from filelock import FileLock
 from pydantic import BaseModel
 from typing import Any, Dict, List, Optional, TypeVar
 
@@ -24,27 +25,32 @@ def _ensure_data_dir_exists():
 def _load_data(filepath: str) -> List[Dict[str, Any]]:
     """Carica dati da un file JSON. Restituisce una lista vuota se il file non esiste o è vuoto/malformato."""
     _ensure_data_dir_exists()
-    if not os.path.exists(filepath):
-        return []
-    try:
-        with open(filepath, "r") as f:
-            # Prima leggi il contenuto, poi fai il parse
-            content = f.read()
-            if not content.strip():  # File vuoto o solo spazi bianchi
-                return []
-            return json.loads(content)  # Usa json.loads per stringhe
-    except FileNotFoundError:
-        return []  # Il file non esiste
-    except json.JSONDecodeError:
-        print(f"Warning: Could not decode JSON from {filepath}. Returning empty list.")
-        return []  # File malformato
+    lock_path = filepath + ".lock"
+    lock = FileLock(lock_path)
+    with lock:
+        if not os.path.exists(filepath):
+            return []
+        try:
+            with open(filepath, "r") as f:
+                content = f.read()
+                if not content.strip():
+                    return []
+                return json.loads(content)
+        except FileNotFoundError:
+            return []
+        except json.JSONDecodeError:
+            print(f"Warning: Could not decode JSON from {filepath}. Returning empty list.")
+            return []
 
 
 def _save_data(filepath: str, data: List[Dict[str, Any]]):
     """Salva dati in un file JSON."""
     _ensure_data_dir_exists()
-    with open(filepath, "w") as f:
-        json.dump(data, f, indent=4, default=str)  # default=str per datetime
+    lock_path = filepath + ".lock"
+    lock = FileLock(lock_path)
+    with lock:
+        with open(filepath, "w") as f:
+            json.dump(data, f, indent=4, default=str)
 
 
 # --- Funzioni specifiche per i Tornei ---
@@ -161,12 +167,6 @@ def create_user_db(user_data: Dict[str, Any]) -> Dict[str, Any]:
     Assumes user_data is a dict representation of the User model.
     """
     users = _load_users()
-    # Check for existing user by email before creating
-    if get_user_by_email_db(user_data.get("email")):
-        print("sdasdsa")
-        # This case should ideally be handled by the caller (e.g., in main.py endpoint)
-        # For now, let's just not add if email exists, or raise an error.
-        # Raising an error or returning None might be better.
     # The caller (e.g., registration endpoint in main.py) should ensure email uniqueness before calling this.
     # However, a check here can be a safeguard.
     existing_user = get_user_by_email_db(user_data.get("email"))
