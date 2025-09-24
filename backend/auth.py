@@ -10,17 +10,9 @@ from pydantic import BaseModel, EmailStr
 # Will get these from main.py or a config file later
 # For now, keep them here for Authlib's Google OAuth integration
 # to be able to import them if it's initialized before main.py fully loads config.
-# This is a bit of a workaround for now.
-SECRET_KEY = "your-secret-key"  # Replace with a strong, randomly generated key
+
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
-
-# Configuration for Google OAuth (to be moved to a config file or env vars)
-GOOGLE_CLIENT_ID = "PLACEHOLDER_CLIENT_ID"  # Replace with your Google Client ID
-GOOGLE_CLIENT_SECRET = "PLACEHOLDER_CLIENT_SECRET"  # Replace with your Google Client Secret
-# This should match the authorized redirect URI in your Google Cloud Console
-GOOGLE_REDIRECT_URI = "http://localhost:8001/auth/google"
-
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token") # Points to the /token endpoint
