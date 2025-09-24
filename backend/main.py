@@ -1,38 +1,48 @@
-import uuid  # For generating invitation links and possibly other IDs if needed
+import uuid
 from datetime import timedelta
-from fastapi import Body, Depends, FastAPI, HTTPException, Path, Request, \
-    status  # To use Depends for get_current_active_user; For Google OAuth
+from fastapi import Body, Depends, FastAPI, HTTPException, Path, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from typing import List, Optional
 
 # Import auth related things
-from auth import (ACCESS_TOKEN_EXPIRE_MINUTES as AUTH_ACCESS_TOKEN_EXPIRE_MINUTES,
-                  ALGORITHM as AUTH_ALGORITHM, SECRET_KEY as AUTH_SECRET_KEY,
-                  Token,
-                  create_access_token, get_current_active_user, get_optional_current_active_user, get_password_hash,
-                  verify_password)  # Rename to avoid clash if main.py has its own SECRET_KEY; oauth2_scheme, # We might define this in main or use from auth; create_access_token,; We might define this in main or use from auth; For protecting routes; For optional user on public routes; Make sure Token model is imported from auth; For password flow; For user creation later
-# Placeholder for database user functions - will be replaced by actual db calls
-from database import create_tournament_db, create_user_db, delete_tournament_db, get_all_tournaments_db, \
-    get_tournament_db, get_user_by_email_db, update_tournament_db, \
-    update_user_db  # This function needs to be created in database.py
-# We will add user related db functions later
-from models import Match, Participant, Tournament, TournamentCreate, User, \
-    UserCreate  # Import User and UserCreate model
+from auth import (
+    ACCESS_TOKEN_EXPIRE_MINUTES as AUTH_ACCESS_TOKEN_EXPIRE_MINUTES,
+    Token,
+    create_access_token,
+    get_current_active_user,
+    get_optional_current_active_user,
+    get_password_hash,
+    verify_password,
+)
+from database import (
+    create_tournament_db,
+    create_user_db,
+    delete_tournament_db,
+    get_all_tournaments_db,
+    get_tournament_db,
+    get_user_by_email_db,
+    update_tournament_db,
+    update_user_db,
+)
+from models import (
+    Match,
+    Participant,
+    Tournament,
+    TournamentCreate,
+    User,
+    UserCreate,
+)
 
 # --- Authentication Settings ---
-# These would ideally come from environment variables or a config file
-SECRET_KEY = AUTH_SECRET_KEY  # Use the one from auth.py for now or define a new one
-ALGORITHM = AUTH_ALGORITHM
 ACCESS_TOKEN_EXPIRE_MINUTES = AUTH_ACCESS_TOKEN_EXPIRE_MINUTES
-
 # --- End Authentication Settings ---
 
-FRONTEND_BASE_URL = "http://192.168.3.62:3000"  # Base URL for the frontend application
+FRONTEND_BASE_URL = "http://192.168.3.62:3000"
 
 app = FastAPI(
     title="Tournament Manager API",
     description="API per la gestione di tornei sportivi.",
-    version="0.1.0"
+    version="0.1.0",
 )
 
 from fastapi.middleware.cors import CORSMiddleware
@@ -48,11 +58,16 @@ app.add_middleware(
 
 # --- Endpoints Tornei ---
 
-@app.post("/tournaments/", response_model=Tournament, status_code=status.HTTP_201_CREATED,
-          summary="Crea un nuovo torneo")
+
+@app.post(
+    "/tournaments/",
+    response_model=Tournament,
+    status_code=status.HTTP_201_CREATED,
+    summary="Crea un nuovo torneo",
+)
 async def create_tournament(
-        tournament_payload: TournamentCreate,  # Use TournamentCreate for request body
-        current_user: User = Depends(get_current_active_user)
+    tournament_payload: TournamentCreate,
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     Crea un nuovo torneo con i dati forniti. Richiede autenticazione.
@@ -62,35 +77,38 @@ async def create_tournament(
     - **format**: 'elimination' o 'round_robin' (richiesto)
     - **start_date**: Data di inizio (opzionale)
     """
-
-    # Construct the full Tournament object, including the user_id from the authenticated user
-    # and default values for id, participants, matches from the Tournament model itself.
     new_tournament_data = Tournament(
-        **tournament_payload.model_dump(),
-        user_id=current_user.id
+        **tournament_payload.model_dump(), user_id=current_user.id
     )
 
-    # Generate invitation link if not provided
     if not new_tournament_data.invitation_link:
         invite_code = str(uuid.uuid4())
-        new_tournament_data.invitation_link = f"{FRONTEND_BASE_URL}/join/{invite_code}"
+        new_tournament_data.invitation_link = (
+            f"{FRONTEND_BASE_URL}/join/{invite_code}"
+        )
     elif not new_tournament_data.invitation_link.startswith(FRONTEND_BASE_URL):
-        # If a partial link like /join/code was provided, prepend base URL
         if new_tournament_data.invitation_link.startswith("/join/"):
-            new_tournament_data.invitation_link = f"{FRONTEND_BASE_URL}{new_tournament_data.invitation_link}"
-        else:  # Fallback for older or manually entered codes, generate a new full link
+            new_tournament_data.invitation_link = (
+                f"{FRONTEND_BASE_URL}{new_tournament_data.invitation_link}"
+            )
+        else:
             invite_code = str(uuid.uuid4())
-            new_tournament_data.invitation_link = f"{FRONTEND_BASE_URL}/join/{invite_code}"
+            new_tournament_data.invitation_link = (
+                f"{FRONTEND_BASE_URL}/join/{invite_code}"
+            )
 
-    # Save to database
     created_tournament_dict = create_tournament_db(new_tournament_data.model_dump())
-
-    # Return the created tournament, Pydantic will validate against Tournament model
     return Tournament(**created_tournament_dict)
 
 
-@app.get("/tournaments/", response_model=List[Tournament], summary="Ottieni tutti i tornei")
-async def get_all_tournaments(current_user: Optional[User] = Depends(get_optional_current_active_user)):
+@app.get(
+    "/tournaments/",
+    response_model=List[Tournament],
+    summary="Ottieni tutti i tornei",
+)
+async def get_all_tournaments(
+    current_user: Optional[User] = Depends(get_optional_current_active_user),
+):
     """
     Restituisce una lista di tutti i tornei esistenti.
     Se l'utente è autenticato, restituisce solo i tornei a cui partecipa (basato sull'email del partecipante).
@@ -99,45 +117,55 @@ async def get_all_tournaments(current_user: Optional[User] = Depends(get_optiona
     all_tournaments_db = get_all_tournaments_db()
 
     if current_user and current_user.email:
-        user_tournaments_dict = {}  # Use a dict to avoid duplicates by tournament ID
+        user_tournaments_dict = {}
         for t_dict in all_tournaments_db:
-            tournament = Tournament(**t_dict)  # Validate and work with model instances
+            tournament = Tournament(**t_dict)
 
-            # Check if current user is the admin/creator
             if tournament.user_id == current_user.id:
                 user_tournaments_dict[tournament.id] = tournament
-                continue  # Already added, no need to check participants for this tournament
+                continue
 
-            # If not admin, check if current user is a participant
             for participant in tournament.participants:
                 if participant.email == current_user.email:
                     user_tournaments_dict[tournament.id] = tournament
-                    break  # Found user in this tournament, move to next tournament
+                    break
 
         return list(user_tournaments_dict.values())
     else:
-        # No user logged in or user has no email (should not happen for active users)
-        # Return all tournaments
         return [Tournament(**t) for t in all_tournaments_db]
 
 
-@app.get("/tournaments/{tournament_id}", response_model=Tournament, summary="Ottieni un torneo specifico")
-async def get_tournament(tournament_id: str = Path(..., description="ID del torneo da recuperare")):
+@app.get(
+    "/tournaments/{tournament_id}",
+    response_model=Tournament,
+    summary="Ottieni un torneo specifico",
+)
+async def get_tournament(
+    tournament_id: str = Path(..., description="ID del torneo da recuperare"),
+):
     """
     Restituisce i dettagli di un torneo specifico basato sul suo ID.
     """
     tournament_db = get_tournament_db(tournament_id)
     if not tournament_db:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found"
+        )
     return Tournament(**tournament_db)
 
 
-@app.put("/tournaments/{tournament_id}", response_model=Tournament, status_code=status.HTTP_200_OK,
-         summary="Aggiorna un torneo esistente")
+@app.put(
+    "/tournaments/{tournament_id}",
+    response_model=Tournament,
+    status_code=status.HTTP_200_OK,
+    summary="Aggiorna un torneo esistente",
+)
 async def update_tournament(
-        tournament_id: str = Path(..., description="ID del torneo da aggiornare"),
-        tournament_update_payload: TournamentCreate = Body(..., description="Dati aggiornati del torneo"),
-        current_user: User = Depends(get_current_active_user)
+    tournament_id: str = Path(..., description="ID del torneo da aggiornare"),
+    tournament_update_payload: TournamentCreate = Body(
+        ..., description="Dati aggiornati del torneo"
+    ),
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     Aggiorna i dettagli di un torneo esistente. Richiede autenticazione.
@@ -146,39 +174,55 @@ async def update_tournament(
     """
     existing_tournament_dict = get_tournament_db(tournament_id)
     if not existing_tournament_dict:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found"
+        )
 
     existing_tournament = Tournament(**existing_tournament_dict)
 
     if existing_tournament.user_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to update this tournament")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to update this tournament",
+        )
 
-    # Construct the full updated Tournament object
-    # Preserve existing id, user_id, participants, matches
     update_data = tournament_update_payload.model_dump(exclude_unset=True)
     updated_tournament = existing_tournament.copy(update=update_data)
 
-    # Generate new invitation link if not provided and was missing, or if explicitly cleared, or not a full URL
     if not updated_tournament.invitation_link or not updated_tournament.invitation_link.startswith(
-            FRONTEND_BASE_URL):
-        if updated_tournament.invitation_link and updated_tournament.invitation_link.startswith("/join/"):
-            updated_tournament.invitation_link = f"{FRONTEND_BASE_URL}{updated_tournament.invitation_link}"
-        else:  # Generate new if empty or malformed
+        FRONTEND_BASE_URL
+    ):
+        if updated_tournament.invitation_link and updated_tournament.invitation_link.startswith(
+            "/join/"
+        ):
+            updated_tournament.invitation_link = (
+                f"{FRONTEND_BASE_URL}{updated_tournament.invitation_link}"
+            )
+        else:
             invite_code = str(uuid.uuid4())
-            updated_tournament.invitation_link = f"{FRONTEND_BASE_URL}/join/{invite_code}"
+            updated_tournament.invitation_link = (
+                f"{FRONTEND_BASE_URL}/join/{invite_code}"
+            )
 
-    tournament_db = update_tournament_db(tournament_id, updated_tournament.model_dump())
+    tournament_db = update_tournament_db(
+        tournament_id, updated_tournament.model_dump()
+    )
     if not tournament_db:
-        # This case should ideally not be reached if the initial get_tournament_db succeeded
-        # and update_tournament_db correctly finds the tournament by ID.
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found during update process")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tournament not found during update process",
+        )
     return Tournament(**tournament_db)
 
 
-@app.delete("/tournaments/{tournament_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Elimina un torneo")
+@app.delete(
+    "/tournaments/{tournament_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Elimina un torneo",
+)
 async def delete_tournament(
-        tournament_id: str = Path(..., description="ID del torneo da eliminare"),
-        current_user: User = Depends(get_current_active_user)
+    tournament_id: str = Path(..., description="ID del torneo da eliminare"),
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     Elimina un torneo specifico. Richiede autenticazione.
@@ -186,36 +230,55 @@ async def delete_tournament(
     """
     tournament_to_delete = get_tournament_db(tournament_id)
     if not tournament_to_delete:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found"
+        )
 
     if tournament_to_delete.get("user_id") != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to delete this tournament")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to delete this tournament",
+        )
 
     if not delete_tournament_db(tournament_id):
-        # This case should not be reached if previous checks passed
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                            detail="Failed to delete tournament from database")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete tournament from database",
+        )
 
-    return  # No content response
+    return
 
 
 # --- Endpoints Partecipanti (da implementare) ---
-# Questi endpoint agiranno su un torneo specifico
 
-@app.get("/tournaments/{tournament_id}/participants/", response_model=List[Participant],
-         summary="Ottieni i partecipanti di un torneo")
-async def get_tournament_participants(tournament_id: str = Path(..., description="ID del torneo")):
+
+@app.get(
+    "/tournaments/{tournament_id}/participants/",
+    response_model=List[Participant],
+    summary="Ottieni i partecipanti di un torneo",
+)
+async def get_tournament_participants(
+    tournament_id: str = Path(..., description="ID del torneo"),
+):
     tournament_dict = get_tournament_db(tournament_id)
     if not tournament_dict:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found"
+        )
     tournament = Tournament(**tournament_dict)
     return tournament.participants
 
 
-@app.get("/tournament-by-invite/{invite_code}", response_model=Tournament,
-         summary="Get tournament details by invite code")
+@app.get(
+    "/tournament-by-invite/{invite_code}",
+    response_model=Tournament,
+    summary="Get tournament details by invite code",
+)
 async def get_tournament_by_invite_code(
-        invite_code: str = Path(..., description="The invitation code (UUID part of the link)")):
+    invite_code: str = Path(
+        ..., description="The invitation code (UUID part of the link)"
+    ),
+):
     """
     Retrieves tournament details if the invite code is valid and the tournament exists.
     This endpoint is public and does not require authentication.
@@ -225,35 +288,52 @@ async def get_tournament_by_invite_code(
     for t_dict in all_tournaments:
         if t_dict.get("invitation_link") == full_invite_link:
             return Tournament(**t_dict)
-    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found or invalid invite code.")
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="Tournament not found or invalid invite code.",
+    )
 
 
-@app.delete("/tournaments/{tournament_id}/participants/{participant_id}", status_code=status.HTTP_204_NO_CONTENT,
-            summary="Rimuovi un partecipante da un torneo")
+@app.delete(
+    "/tournaments/{tournament_id}/participants/{participant_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Rimuovi un partecipante da un torneo",
+)
 async def remove_participant_from_tournament(
-        tournament_id: str = Path(..., description="ID del torneo"),
-        participant_id: str = Path(..., description="ID del partecipante da rimuovere")
+    tournament_id: str = Path(..., description="ID del torneo"),
+    participant_id: str = Path(..., description="ID del partecipante da rimuovere"),
 ):
     tournament_dict = get_tournament_db(tournament_id)
     if not tournament_dict:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found"
+        )
 
     tournament = Tournament(**tournament_dict)
     original_participant_count = len(tournament.participants)
-    tournament.participants = [p for p in tournament.participants if p.id != participant_id]
+    tournament.participants = [
+        p for p in tournament.participants if p.id != participant_id
+    ]
 
     if len(tournament.participants) == original_participant_count:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Participant not found in this tournament")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Participant not found in this tournament",
+        )
 
     update_tournament_db(tournament_id, tournament.model_dump())
     return
 
 
-@app.post("/tournaments/{tournament_id}/join_authenticated", response_model=Participant,
-          status_code=status.HTTP_201_CREATED, summary="Join a tournament as an authenticated user")
+@app.post(
+    "/tournaments/{tournament_id}/join_authenticated",
+    response_model=Participant,
+    status_code=status.HTTP_201_CREATED,
+    summary="Join a tournament as an authenticated user",
+)
 async def join_tournament_authenticated(
-        tournament_id: str = Path(..., description="ID of the tournament to join"),
-        current_user: User = Depends(get_current_active_user)
+    tournament_id: str = Path(..., description="ID of the tournament to join"),
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     Allows an authenticated user to join a tournament.
@@ -261,36 +341,25 @@ async def join_tournament_authenticated(
     """
     tournament_dict = get_tournament_db(tournament_id)
     if not tournament_dict:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found"
+        )
 
     tournament = Tournament(**tournament_dict)
 
     if not tournament.registration_open:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="Registration for this tournament is closed.")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Registration for this tournament is closed.",
+        )
 
-    # Check if user (by email) is already a participant
     for p in tournament.participants:
         if p.email == current_user.email:
-            # User is already a participant, return their participant info or raise an error
-            # For idempotency, we can return the existing participant.
-            # Or raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User already registered in this tournament.")
-            return p  # Return existing participant entry
+            return p
 
-    # Create a new participant from the current_user's details
-    # The Participant model expects 'name' and 'email'. 'name' might not be in User model directly.
-    # For now, let's assume User model might have a name, or use email as name if not.
-    # User model has: id, email, hashed_password, google_id, is_active. No 'name' field.
-    # We should use the user's email as the participant's name if no other name is available.
-    # Or, the Participant model could be made more flexible, or User model could be extended.
-    # Let's use email for name for now if User.name is not available.
-    participant_name = getattr(current_user, 'name', current_user.email)  # Get 'name' if exists, else email
+    participant_name = getattr(current_user, "name", current_user.email)
 
-    new_participant = Participant(
-        name=participant_name,  # Or current_user.name if you add it to User model
-        email=current_user.email
-        # ID is auto-generated by Participant model
-    )
+    new_participant = Participant(name=participant_name, email=current_user.email)
     tournament.participants.append(new_participant)
     update_tournament_db(tournament_id, tournament.model_dump())
     return new_participant
@@ -298,34 +367,39 @@ async def join_tournament_authenticated(
 
 # --- Endpoints Match e Risultati (da implementare) ---
 
-@app.post("/tournaments/{tournament_id}/matches/generate", summary="Genera bracket/calendario per un torneo")
+
+@app.post(
+    "/tournaments/{tournament_id}/matches/generate",
+    summary="Genera bracket/calendario per un torneo",
+)
 async def generate_matches_for_tournament(
     tournament_id: str = Path(..., description="ID del torneo"),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
     tournament_dict = get_tournament_db(tournament_id)
     if not tournament_dict:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found"
+        )
 
     tournament = Tournament(**tournament_dict)
 
-    # Authorization check
     if tournament.user_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to generate matches for this tournament")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to generate matches for this tournament",
+        )
 
     if not tournament.participants or len(tournament.participants) < 2:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="Not enough participants to generate matches.")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Not enough participants to generate matches.",
+        )
 
-    # Logica di generazione placeholder
-    tournament.matches = []  # Resetta i match esistenti
-    tournament.status = 'in_progress'
+    tournament.matches = []
+    tournament.status = "in_progress"
     if tournament.format == "elimination":
-        # Semplice logica di placeholder per eliminazione diretta
-        # In un'implementazione reale, questo sarebbe molto più complesso
-        # (gestione bye, seeding, etc.)
         num_participants = len(tournament.participants)
-        # Per ora, solo match diretti se il numero è pari
         if num_participants % 2 == 0:
             for i in range(0, num_participants, 2):
                 p1 = tournament.participants[i]
@@ -334,14 +408,18 @@ async def generate_matches_for_tournament(
                     participant1_id=p1.id,
                     participant2_id=p2.id,
                     round_number=1,
-                    match_number=(i // 2) + 1
+                    match_number=(i // 2) + 1,
                 )
                 tournament.matches.append(match)
         else:
-            # Gestione bye semplificata (il primo partecipante passa)
-            # Questo è solo un esempio, non una logica di bracket completa
             tournament.matches.append(
-                Match(participant1_id=tournament.participants[0].id, is_bye=True, round_number=1, match_number=1))
+                Match(
+                    participant1_id=tournament.participants[0].id,
+                    is_bye=True,
+                    round_number=1,
+                    match_number=1,
+                )
+            )
             for i in range(1, num_participants, 2):
                 if i + 1 < num_participants:
                     p1 = tournament.participants[i]
@@ -350,16 +428,12 @@ async def generate_matches_for_tournament(
                         participant1_id=p1.id,
                         participant2_id=p2.id,
                         round_number=1,
-                        match_number=((i - 1) // 2) + 2
+                        match_number=((i - 1) // 2) + 2,
                     )
                     tournament.matches.append(match)
 
-
     elif tournament.format == "round_robin":
-        # Semplice logica di placeholder per girone all'italiana
-        participants_shuffled = tournament.participants[:]  # Copia
-        # random.shuffle(participants_shuffled) # Opzionale: mescolare i partecipanti
-
+        participants_shuffled = tournament.participants[:]
         num_participants = len(participants_shuffled)
         match_num_counter = 1
         for i in range(num_participants):
@@ -369,41 +443,59 @@ async def generate_matches_for_tournament(
                 match = Match(
                     participant1_id=p1.id,
                     participant2_id=p2.id,
-                    match_number=match_num_counter
+                    match_number=match_num_counter,
                 )
                 tournament.matches.append(match)
                 match_num_counter += 1
     else:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="Tournament format not supported for match generation yet.")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Tournament format not supported for match generation yet.",
+        )
 
     update_tournament_db(tournament_id, tournament.model_dump())
-    return {"message": "Matches generated (placeholder logic)", "tournament_id": tournament_id,
-            "matches": tournament.matches}
+    return {
+        "message": "Matches generated (placeholder logic)",
+        "tournament_id": tournament_id,
+        "matches": tournament.matches,
+    }
 
 
-@app.get("/tournaments/{tournament_id}/matches", response_model=List[Match], summary="Ottieni i match di un torneo")
-async def get_tournament_matches(tournament_id: str = Path(..., description="ID del torneo")):
+@app.get(
+    "/tournaments/{tournament_id}/matches",
+    response_model=List[Match],
+    summary="Ottieni i match di un torneo",
+)
+async def get_tournament_matches(
+    tournament_id: str = Path(..., description="ID del torneo"),
+):
     tournament_dict = get_tournament_db(tournament_id)
     if not tournament_dict:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found"
+        )
     tournament = Tournament(**tournament_dict)
     return tournament.matches
 
 
-@app.post("/tournaments/{tournament_id}/matches/{match_id}/result", response_model=Match,
-          summary="Inserisci/Aggiorna il risultato di un match")
+@app.post(
+    "/tournaments/{tournament_id}/matches/{match_id}/result",
+    response_model=Match,
+    summary="Inserisci/Aggiorna il risultato di un match",
+)
 async def record_match_result(
-        tournament_id: str = Path(..., description="ID del torneo"),
-        match_id: str = Path(..., description="ID del match"),
-        score_participant1: Optional[int] = Body(None, embed=True),
-        score_participant2: Optional[int] = Body(None, embed=True),
-        winner_id: Optional[str] = Body(None, embed=True),
-        current_user: User = Depends(get_current_active_user)
+    tournament_id: str = Path(..., description="ID del torneo"),
+    match_id: str = Path(..., description="ID del match"),
+    score_participant1: Optional[int] = Body(None, embed=True),
+    score_participant2: Optional[int] = Body(None, embed=True),
+    winner_id: Optional[str] = Body(None, embed=True),
+    current_user: User = Depends(get_current_active_user),
 ):
     tournament_dict = get_tournament_db(tournament_id)
     if not tournament_dict:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found"
+        )
 
     tournament = Tournament(**tournament_dict)
     match_to_update = None
@@ -416,40 +508,52 @@ async def record_match_result(
             break
 
     if not match_to_update:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Match not found in this tournament")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Match not found in this tournament",
+        )
 
     if match_to_update.is_bye:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot record result for a bye match")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot record result for a bye match",
+        )
 
-    # Authorization check: only participants of the match can record the result.
-    participant1 = next((p for p in tournament.participants if p.id == match_to_update.participant1_id), None)
-    participant2 = next((p for p in tournament.participants if p.id == match_to_update.participant2_id), None)
+    participant1 = next(
+        (p for p in tournament.participants if p.id == match_to_update.participant1_id),
+        None,
+    )
+    participant2 = next(
+        (p for p in tournament.participants if p.id == match_to_update.participant2_id),
+        None,
+    )
 
-    # Create a list of emails of the participants in the match
     participant_emails = []
     if participant1:
         participant_emails.append(participant1.email)
     if participant2:
         participant_emails.append(participant2.email)
 
-    # Check if the current user's email is in the list of participant emails
     if current_user.email not in participant_emails:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not authorized to record results for this match."
+            detail="You are not authorized to record results for this match.",
         )
 
-    # Aggiorna i punteggi e lo stato
     if score_participant1 is not None:
         match_to_update.score_participant1 = score_participant1
     if score_participant2 is not None:
         match_to_update.score_participant2 = score_participant2
 
-    # Determina il vincitore se non fornito esplicitamente e i punteggi sono presenti
     if winner_id:
-        if winner_id not in [match_to_update.participant1_id, match_to_update.participant2_id]:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                                detail="Winner ID does not match participants in the match")
+        if winner_id not in [
+            match_to_update.participant1_id,
+            match_to_update.participant2_id,
+        ]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Winner ID does not match participants in the match",
+            )
         match_to_update.winner_id = winner_id
     elif score_participant1 is not None and score_participant2 is not None:
         if score_participant1 > score_participant2:
@@ -457,41 +561,49 @@ async def record_match_result(
         elif score_participant2 > score_participant1:
             match_to_update.winner_id = match_to_update.participant2_id
         else:
-            # Gestione pareggio (potrebbe non essere permessa in tutti i formati)
-            # Per ora, non impostiamo un vincitore se c'è pareggio e non è specificato
             pass
 
-    if match_to_update.winner_id:  # Se c'è un vincitore (o è stato determinato)
-        match_to_update.status = 'completed'
-    elif score_participant1 is not None or score_participant2 is not None:  # Se sono stati inseriti punteggi parziali
-        match_to_update.status = 'in_progress'
+    if match_to_update.winner_id:
+        match_to_update.status = "completed"
+    elif score_participant1 is not None or score_participant2 is not None:
+        match_to_update.status = "in_progress"
 
     tournament.matches[match_index] = match_to_update
 
-    # Check if all matches are completed
-    all_matches_completed = all(m.status == 'completed' for m in tournament.matches)
+    all_matches_completed = all(m.status == "completed" for m in tournament.matches)
     if all_matches_completed:
-        tournament.status = 'completed'
+        tournament.status = "completed"
 
     update_tournament_db(tournament_id, tournament.model_dump())
     return match_to_update
 
 
 # --- Endpoint per tabellone/calendario (GET) ---
-# Questi potrebbero essere gli stessi di get_tournament_matches o più specifici
 
-@app.get("/tournaments/{tournament_id}/bracket", summary="Ottieni il tabellone (per eliminazione diretta)")
-async def get_tournament_bracket(tournament_id: str = Path(..., description="ID del torneo")):
-    # Per ora, restituisce semplicemente i match.
-    # In futuro, potrebbe formattare i dati specificamente per una visualizzazione a tabellone.
+
+@app.get(
+    "/tournaments/{tournament_id}/bracket",
+    summary="Ottieni il tabellone (per eliminazione diretta)",
+)
+async def get_tournament_bracket(
+    tournament_id: str = Path(..., description="ID del torneo"),
+):
     tournament_dict = get_tournament_db(tournament_id)
     if not tournament_dict:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found"
+        )
     tournament = Tournament(**tournament_dict)
     if tournament.format != "elimination":
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="Bracket view is for elimination tournaments only.")
-    return {"tournament_id": tournament.id, "name": tournament.name, "matches": tournament.matches}
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Bracket view is for elimination tournaments only.",
+        )
+    return {
+        "tournament_id": tournament.id,
+        "name": tournament.name,
+        "matches": tournament.matches,
+    }
 
 
 @app.get("/")
@@ -499,108 +611,116 @@ def read_root():
     return {"message": "Backend is running!"}
 
 
-@app.get("/tournaments/{tournament_id}/schedule", summary="Ottieni il calendario (per girone all'italiana)")
-async def get_tournament_schedule(tournament_id: str = Path(..., description="ID del torneo")):
-    # Per ora, restituisce semplicemente i match.
-    # In futuro, potrebbe raggruppare per round o data.
+@app.get(
+    "/tournaments/{tournament_id}/schedule",
+    summary="Ottieni il calendario (per girone all'italiana)",
+)
+async def get_tournament_schedule(
+    tournament_id: str = Path(..., description="ID del torneo"),
+):
     tournament_dict = get_tournament_db(tournament_id)
     if not tournament_dict:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found"
+        )
     tournament = Tournament(**tournament_dict)
     if tournament.format != "round_robin":
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="Schedule view is for round-robin tournaments only.")
-    return {"tournament_id": tournament.id, "name": tournament.name, "matches": tournament.matches}
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Schedule view is for round-robin tournaments only.",
+        )
+    return {
+        "tournament_id": tournament.id,
+        "name": tournament.name,
+        "matches": tournament.matches,
+    }
 
 
-@app.get("/tournaments/{tournament_id}/results", summary="Ottieni i risultati finali di un torneo")
-async def get_tournament_results(tournament_id: str = Path(..., description="ID del torneo")):
+@app.get(
+    "/tournaments/{tournament_id}/results",
+    summary="Ottieni i risultati finali di un torneo",
+)
+async def get_tournament_results(
+    tournament_id: str = Path(..., description="ID del torneo"),
+):
     """
     Restituisce i risultati finali di un torneo.
     """
     tournament_dict = get_tournament_db(tournament_id)
     if not tournament_dict:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found"
+        )
 
     tournament = Tournament(**tournament_dict)
 
-    # if tournament.status != 'completed':
-    #     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Tournament not completed yet")
-
     results = []
     if tournament.format == "elimination":
-        # For elimination, the winner is the winner of the final match
         final_match = None
         for match in tournament.matches:
-            if match.round_number == max(m.round_number for m in tournament.matches if m.round_number is not None):
+            if match.round_number == max(
+                m.round_number for m in tournament.matches if m.round_number is not None
+            ):
                 final_match = match
                 break
         if final_match and final_match.winner_id:
-            winner = next((p for p in tournament.participants if p.id == final_match.winner_id), None)
+            winner = next(
+                (p for p in tournament.participants if p.id == final_match.winner_id),
+                None,
+            )
             if winner:
                 results.append({"participant": winner.name, "rank": 1})
     elif tournament.format == "round_robin":
-        # For round robin, rank participants by number of wins
         participant_wins = {p.id: 0 for p in tournament.participants}
         for match in tournament.matches:
             if match.winner_id:
                 participant_wins[match.winner_id] += 1
 
-        sorted_participants = sorted(participant_wins.items(), key=lambda item: item[1], reverse=True)
+        sorted_participants = sorted(
+            participant_wins.items(), key=lambda item: item[1], reverse=True
+        )
 
         for i, (participant_id, wins) in enumerate(sorted_participants):
-            participant = next((p for p in tournament.participants if p.id == participant_id), None)
+            participant = next(
+                (p for p in tournament.participants if p.id == participant_id), None
+            )
             if participant:
-                results.append({"participant": participant.name, "rank": i + 1, "wins": wins})
+                results.append(
+                    {"participant": participant.name, "rank": i + 1, "wins": wins}
+                )
 
     return results
 
 
-# Per avviare l'app con Uvicorn (per lo sviluppo):
-# uvicorn backend.main:app --reload --port 8000
-# Assicurati di essere nella directory principale del progetto (non dentro backend/)
-# quando esegui questo comando.
-# Oppure, se sei in backend/: uvicorn main:app --reload --port 8000
-
-
 # --- Authentication Endpoints ---
 
-@app.post("/token", response_model=Token, summary="Create access token for user login")
+
+@app.post(
+    "/token", response_model=Token, summary="Create access token for user login"
+)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
     """
     OAuth2 compatible token endpoint.
     Takes email (as username) and password. Returns an access token.
     """
-    user_dict = get_user_by_email_db(form_data.username)  # form_data.username is the email
+    user_dict = get_user_by_email_db(form_data.username)
 
     if not user_dict:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",  # Keep it generic
+            detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Convert dict to User model instance
     user_in_db = User(**user_dict)
 
-    # Check if user has a password (e.g. not a Google-only user)
     if not user_in_db.hashed_password:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User registered through an external provider or password not set.",
+            detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Verify the password
-    if not verify_password(form_data.password, user_in_db.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",  # Keep it generic
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    # Verify the password
-    # The hashed_password should come from your user model in the database
     if not verify_password(form_data.password, user_in_db.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -609,18 +729,23 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
         )
 
     if not user_in_db.is_active:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user"
+        )
 
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    # The 'sub' (subject) of the token should be a unique identifier for the user.
-    # Using user's email here, but user.id is also common.
     access_token = create_access_token(
         data={"sub": user_in_db.email}, expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-@app.post("/users/register", response_model=User, status_code=status.HTTP_201_CREATED, summary="Register a new user")
+@app.post(
+    "/users/register",
+    response_model=User,
+    status_code=status.HTTP_201_CREATED,
+    summary="Register a new user",
+)
 async def register_user(user_in: UserCreate):
     """
     Registers a new user with email and password.
@@ -636,50 +761,29 @@ async def register_user(user_in: UserCreate):
         )
 
     hashed_password = get_password_hash(user_in.password)
-
-    # Create the new user object. The User model includes an id field with a default factory.
     new_user_data = User(
         email=user_in.email,
         hashed_password=hashed_password,
-        is_active=True  # Users are active by default upon registration
-        # name=user_in.name # If you added 'name' to User model and want to store it
+        is_active=True,
     )
-
-    # Convert Pydantic model to dict for database storage, ensuring default factory for ID is called.
     user_to_save_dict = new_user_data.model_dump()
-
     created_user_dict = create_user_db(user_to_save_dict)
-
-    # Return the created user, conforming to the response_model=User
-    # Pydantic will validate the created_user_dict against the User model.
     return User(**created_user_dict)
 
 
-#
-@app.get("/users/me", response_model=User, summary="Get current authenticated user's details")
+@app.get(
+    "/users/me",
+    response_model=User,
+    summary="Get current authenticated user's details",
+)
 async def read_users_me(current_user: User = Depends(get_current_active_user)):
     """
     Returns the details of the currently authenticated user.
     """
-    # The current_user object obtained from get_current_active_user is already a Pydantic User model instance.
-    # It would have been populated based on the token's subject (e.g., email) and then fetched from the DB.
-    # If get_current_active_user directly returns the User model instance from the database,
-    # then it already contains all necessary fields like id, email, is_active, etc.
-    # (excluding sensitive fields like hashed_password if the response_model=User filters it, which it should).
-    # The User model should have sensitive fields like hashed_password excluded from serialization by default
-    # or via response_model_exclude={"hashed_password"} if not done automatically by Pydantic's smartness with response_model.
-    # For now, assuming User model's default serialization is safe or response_model handles it.
     return current_user
-
-
-# import uuid # No longer needed here directly as User model handles ID generation and update_user_db handles missing IDs if necessary
 
 
 if __name__ == "__main__":
     import uvicorn
 
-    # Questo è solo per debug facile, non per produzione
     uvicorn.run(app, host="0.0.0.0", port=8001)
-    # Per eseguire con reload dalla root del progetto:
-    # uvicorn backend.main:app --reload
-    pass

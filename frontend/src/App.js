@@ -28,35 +28,6 @@ function App() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Handle Google OAuth callback
-  useEffect(() => {
-    const processAuthCallback = async () => {
-      if (location.pathname === '/auth/callback') {
-        const params = new URLSearchParams(location.search);
-        const token = params.get('token');
-        if (token) {
-          localStorage.setItem('authToken', token);
-          try {
-            const userDetails = await api.getCurrentUserDetails();
-            setCurrentUser(userDetails);
-            const postLoginRedirect = localStorage.getItem('postLoginRedirect') || '/';
-            localStorage.removeItem('postLoginRedirect');
-            navigate(postLoginRedirect);
-          } catch (err) {
-            setAuthError("Failed to fetch user details after Google login.");
-            localStorage.removeItem('authToken');
-            setCurrentUser(null);
-            navigate("/login");
-          }
-        } else {
-          setAuthError("Failed to login with Google (token missing).");
-          navigate("/login");
-        }
-      }
-    };
-    processAuthCallback();
-  }, [location, navigate]);
-
   // Check for token on initial load
   useEffect(() => {
     const verifyTokenAndFetchUser = async () => {
@@ -115,10 +86,6 @@ function App() {
     } finally {
       setIsAuthLoading(false);
     }
-  };
-
-  const handleGoogleLogin = () => {
-    window.location.href = `${api.API_BASE_URL}/login/google`;
   };
 
   const handleLogout = () => {
@@ -226,7 +193,7 @@ function App() {
   };
 
 
-  if (isInitializing && location.pathname !== '/auth/callback') {
+  if (isInitializing) {
     return <p className="text-center py-10">Initializing app...</p>;
   }
 
@@ -254,7 +221,7 @@ function App() {
           <Routes>
             <Route path="/login" element={
               <AuthRoute>
-                <LoginPage onLogin={handleLogin} onGoogleLogin={handleGoogleLogin} error={authError} isLoading={isAuthLoading} />
+                <LoginPage onLogin={handleLogin} error={authError} isLoading={isAuthLoading} />
               </AuthRoute>
             } />
             <Route path="/register" element={
@@ -292,7 +259,6 @@ function App() {
               </ProtectedRoute>
             } />
             <Route path="/tournaments" element={<Navigate to="/" replace />} />
-            <Route path="/auth/callback" element={ <p>Processing login...</p> } />
             <Route path="*" element={
                 <div className="text-center p-10">
                     <h1 className="text-3xl font-bold text-primary mb-4">404 - Page Not Found</h1>

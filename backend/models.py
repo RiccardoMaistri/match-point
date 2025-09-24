@@ -33,7 +33,6 @@ class User(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     email: str = Field(..., unique=True)
     hashed_password: Optional[str] = None
-    google_id: Optional[str] = None
     is_active: bool = True
 
     # Timestamps can be added later if needed
