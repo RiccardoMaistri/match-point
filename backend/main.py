@@ -33,7 +33,7 @@ GOOGLE_CLIENT_SECRET = AUTH_GOOGLE_CLIENT_SECRET
 GOOGLE_REDIRECT_URI = AUTH_GOOGLE_REDIRECT_URI
 # --- End Authentication Settings ---
 
-FRONTEND_BASE_URL = "http://localhost:3000"  # Base URL for the frontend application
+FRONTEND_BASE_URL = "http://192.168.3.62:3000"  # Base URL for the frontend application
 
 # Initialize OAuth client (for Google Login)
 oauth = OAuth()
@@ -58,7 +58,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:8080", "http://127.0.0.1:8080", "http://192.168.3.62:3000"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -740,7 +740,7 @@ async def auth_google(request: Request):
     # For SPAs, redirecting with the token in a query parameter is common.
     # The frontend then extracts it and stores it.
     # IMPORTANT: Ensure your frontend URL is correct.
-    frontend_url = "http://localhost:3000"  # Configure this appropriately
+    frontend_url = FRONTEND_BASE_URL  # Configure this appropriately
     redirect_url_with_token = f"{frontend_url}/auth/callback?token={app_access_token}&token_type=bearer"
 
     # Alternatively, render an HTML page that posts the token to the parent window (more secure than query params for history)

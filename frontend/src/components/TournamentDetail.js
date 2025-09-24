@@ -197,22 +197,26 @@ function TournamentDetail({ tournament, refetchTournament, onBackToList, globalI
 
       {/* Details Card */}
       <Section title="Details">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4 text-sm">
-          <div className="flex flex-col"><strong className="text-gray-600 dark:text-gray-400">Type:</strong> <span className="text-gray-800 dark:text-gray-200 capitalize">{tournament.tournament_type}</span></div>
-          <div className="flex flex-col"><strong className="text-gray-600 dark:text-gray-400">Format:</strong> <span className="text-gray-800 dark:text-gray-200 capitalize">{tournament.format.replace('_', ' ')}</span></div>
-          <div className="flex items-center gap-2"><strong className="text-gray-600 dark:text-gray-400">Status:</strong> <span className={`px-2 py-0.5 text-xs rounded-full font-semibold ${statusColors[tournament.status]}`}>{tournament.status.replace('_', ' ')}</span></div>
-          {tournament.start_date && <div className="flex flex-col"><strong className="text-gray-600 dark:text-gray-400">Start Date:</strong> <span className="text-gray-800 dark:text-gray-200">{new Date(tournament.start_date).toLocaleDateString()}</span></div>}
-          {tournament.end_date && <div className="flex flex-col"><strong className="text-gray-600 dark:text-gray-400">End Date:</strong> <span className="text-gray-800 dark:text-gray-200">{new Date(tournament.end_date).toLocaleDateString()}</span></div>}
-          {tournament.invitation_link && (
-            <div className="sm:col-span-2 md:col-span-3 flex flex-wrap items-center gap-x-4 gap-y-2">
-              <strong className="text-gray-600 dark:text-gray-400">Invitation Link:</strong>
-              <div className="flex items-center gap-2 p-2 bg-gray-100 dark:bg-gray-900 rounded-lg">
-                <a href={tournament.invitation_link} target="_blank" rel="noopener noreferrer" className="text-indigo-600 dark:text-indigo-400 hover:underline break-all text-xs sm:text-sm">{tournament.invitation_link}</a>
-                {isOwner && <button onClick={handleShareInviteLink} className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700">Share</button>}
-              </div>
-            </div>
-          )}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4 text-sm">
+          <div><strong className="block text-gray-600 dark:text-gray-400">Type</strong> <span className="text-gray-800 dark:text-gray-200 capitalize">{tournament.tournament_type}</span></div>
+          <div><strong className="block text-gray-600 dark:text-gray-400">Format</strong> <span className="text-gray-800 dark:text-gray-200 capitalize">{tournament.format.replace('_', ' ')}</span></div>
+          <div>
+            <strong className="block text-gray-600 dark:text-gray-400">Status</strong>
+            <span className={`px-2 py-0.5 text-xs rounded-full font-semibold ${statusColors[tournament.status]}`}>{tournament.status.replace('_', ' ')}</span>
+          </div>
+          {tournament.start_date && <div><strong className="block text-gray-600 dark:text-gray-400">Start Date</strong> <span className="text-gray-800 dark:text-gray-200">{new Date(tournament.start_date).toLocaleDateString()}</span></div>}
+          {tournament.end_date && <div><strong className="block text-gray-600 dark:text-gray-400">End Date</strong> <span className="text-gray-800 dark:text-gray-200">{new Date(tournament.end_date).toLocaleDateString()}</span></div>}
         </div>
+        
+        {isOwner && tournament.invitation_link && (
+          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <p className="text-sm text-gray-600 dark:text-gray-400">Invite others to join this tournament.</p>
+            <button onClick={handleShareInviteLink} className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition-colors">
+              Invite
+            </button>
+          </div>
+        )}
+        
         {shareFeedback && <div className={`mt-4 p-2 text-sm rounded-md text-center ${shareFeedback.includes('copied') || shareFeedback.includes('shared') ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{shareFeedback}</div>}
       </Section>
 

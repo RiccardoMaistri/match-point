@@ -1,22 +1,22 @@
 #!/bin/bash
 
 # Start the backend
-echo "Starting backend on port 8001..."
+echo "Starting backend on port 8001, accessible on your local network..."
 cd backend
-python3 -m uvicorn main:app --reload --port 8001 &
+python3 -m uvicorn main:app --reload --host 0.0.0.0 --port 8001 &
 BACKEND_PID=$!
 
 # Wait a moment for backend to start
 sleep 2
 
 # Start the frontend
-echo "Starting frontend on port 8080..."
+echo "Starting frontend on port 3000..."
 cd ../frontend
 npm start &
 FRONTEND_PID=$!
 
-echo "Backend running on http://localhost:8001"
-echo "Frontend running on http://localhost:8080"
+echo "Backend running and accessible on your network at port 8001"
+echo "Frontend running on http://localhost:3000"
 echo "Press Ctrl+C to stop both servers"
 
 # Function to cleanup processes
