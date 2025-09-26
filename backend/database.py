@@ -1,4 +1,5 @@
 import json
+import math
 import os
 import uuid  # For generating IDs
 from filelock import FileLock
@@ -15,6 +16,7 @@ TOURNAMENTS_FILE = os.path.join(DATA_DIR, "tournaments.json")
 # In futuro potremmo separare partecipanti e match, ma per ora li teniamo dentro tournaments
 # PARTICIPANTS_FILE = os.path.join(DATA_DIR, "participants.json")
 # MATCHES_FILE = os.path.join(DATA_DIR, "matches.json")
+
 
 def _ensure_data_dir_exists():
     """Assicura che la directory jsondata esista."""
@@ -54,6 +56,7 @@ def _save_data(filepath: str, data: List[Dict[str, Any]]):
 
 
 # --- Funzioni specifiche per i Tornei ---
+
 
 def load_tournaments() -> List[Dict[str, Any]]:
     """Carica tutti i tornei."""
@@ -104,6 +107,70 @@ def delete_tournament_db(tournament_id: str) -> bool:
         save_tournaments(tournaments)
         return True
     return False
+
+
+def record_match_result_db(tournament_id: str, match_id: str, winner_id: str) -> Optional[Dict[str, Any]]:
+    """Records a match result and updates the tournament bracket for elimination tournaments."""
+    tournament = get_tournament_db(tournament_id)
+    if not tournament or tournament.get("format") != "elimination":
+        print(f"Tournament {tournament_id} not found or not an elimination tournament.")
+        return None
+
+    matches = tournament.get("matches", [])
+    
+    current_match = None
+    for m in matches:
+        if m.get("id") == match_id:
+            current_match = m
+            break
+    
+    if not current_match:
+        print(f"Match {match_id} not found in tournament {tournament_id}.")
+        return None
+
+    # Update current match
+    current_match["winner_id"] = winner_id
+    current_match["status"] = "completed"
+
+    # --- Advance winner to next round ---
+    num_participants = len(tournament.get("participants", []))
+    if num_participants == 0:
+        return update_tournament_db(tournament_id, tournament)
+
+    num_rounds = math.ceil(math.log2(num_participants))
+    current_round_num = current_match.get("round_number")
+
+    if current_round_num is None or current_round_num >= num_rounds:
+        # This was the final match or a match with no round number
+        if current_round_num and current_round_num >= num_rounds:
+            tournament["status"] = "completed"
+        return update_tournament_db(tournament_id, tournament)
+
+    current_match_num_in_round = current_match.get("match_number")
+    if current_match_num_in_round is None:
+        return update_tournament_db(tournament_id, tournament)
+
+    next_round_num = current_round_num + 1
+    next_match_num_in_round = current_match_num_in_round // 2
+    
+    next_match = None
+    for m in matches:
+        if m.get("round_number") == next_round_num and m.get("match_number") == next_match_num_in_round:
+            next_match = m
+            break
+            
+    if next_match:
+        if current_match_num_in_round % 2 == 0:
+            next_match["participant1_id"] = winner_id
+        else:
+            next_match["participant2_id"] = winner_id
+            
+        if next_match.get("participant1_id") and next_match.get("participant2_id"):
+            next_match["status"] = "pending"
+
+    # The update_tournament_db function saves the whole tournament object.
+    # We have modified `tournament` in place, so we just need to call it.
+    return update_tournament_db(tournament_id, tournament)
 
 
 # --- Inizializzazione (opzionale, per assicurarsi che i file esistano) ---
@@ -225,46 +292,68 @@ from datetime import datetime, timezone
 
 FRONTEND_BASE_URL_FOR_DUMMY_DATA = "http://localhost:3000" # Duplicated for direct use here if main.py not imported
 
-def _generate_dummy_matches(participants: List[ParticipantModel], tournament_format: str) -> List[MatchModel]:
-    matches = []
+def _generate_elimination_bracket(participants: List[ParticipantModel]) -> List[MatchModel]:
+    """Generates a full elimination bracket, including future rounds with placeholders."""
     num_participants = len(participants)
     if num_participants < 2:
         return []
 
+    # Sort participants by ranking to give byes to top seeds
+    participants.sort(key=lambda p: p.ranking if p.ranking is not None else 9999)
+
+    num_rounds = math.ceil(math.log2(num_participants))
+    bracket_size = 2**num_rounds
+    num_byes = bracket_size - num_participants
+
+    matches = []
+    
+    # --- Round 1 ---
+    # Participants who get a bye advance to round 2 automatically
+    bye_participants = participants[:num_byes]
+    # Participants who play in round 1
+    round1_match_participants = participants[num_byes:]
+
+    # Create matches for players in round 1
+    match_in_round_counter = 0
+    for i in range(0, len(round1_match_participants), 2):
+        p1 = round1_match_participants[i]
+        p2 = round1_match_participants[i+1]
+        match = MatchModel(
+            round_number=1,
+            match_number=match_in_round_counter,
+            participant1_id=p1.id,
+            participant2_id=p2.id,
+        )
+        matches.append(match)
+        match_in_round_counter += 1
+
+    # --- Subsequent Rounds ---
+    # Create placeholder matches for all future rounds
+    for r in range(2, num_rounds + 1):
+        num_matches_in_round = bracket_size // (2**r)
+        for i in range(num_matches_in_round):
+            match = MatchModel(round_number=r, match_number=i)
+            matches.append(match)
+
+    # --- Populate Round 2 with bye winners ---
+    # This is a simplified seeding. A real implementation would be more complex.
+    round2_matches = [m for m in matches if m.round_number == 2]
+    bye_p_idx = 0
+    for match in round2_matches:
+        if bye_p_idx < len(bye_participants):
+            match.participant1_id = bye_participants[bye_p_idx].id
+            bye_p_idx += 1
+        else:
+            break # No more bye participants to assign
+
+    return matches
+
+def _generate_dummy_matches(participants: List[ParticipantModel], tournament_format: str) -> List[Dict[str, Any]]:
+    matches_models = []
     if tournament_format == "elimination":
-        match_num_counter = 1
-        round_num_counter = 1
-        # Simplified: assumes powers of 2 or handles byes naively.
-        # For a real scenario, a proper bracket generation algorithm is needed.
-        if num_participants % 2 != 0: # Odd number, first participant gets a bye
-            bye_match = MatchModel(
-                participant1_id=participants[0].id,
-                is_bye=True,
-                round_number=round_num_counter,
-                match_number=match_num_counter,
-                status='completed', # Byes are auto-completed
-                winner_id=participants[0].id
-            )
-            matches.append(bye_match)
-            # remaining_participants = participants[1:] # For next round logic (not fully implemented here)
-            match_num_counter +=1
-
-        # Pair the rest for the first round
-        # This is still simplified and doesn't build a full bracket tree
-        for i in range(num_participants % 2, num_participants, 2):
-             if i + 1 < num_participants:
-                p1 = participants[i]
-                p2 = participants[i+1]
-                match = MatchModel(
-                    participant1_id=p1.id,
-                    participant2_id=p2.id,
-                    round_number=round_num_counter,
-                    match_number=match_num_counter
-                )
-                matches.append(match)
-                match_num_counter +=1
-
+        matches_models = _generate_elimination_bracket(participants)
     elif tournament_format == "round_robin":
+        num_participants = len(participants)
         match_num_counter = 1
         for i in range(num_participants):
             for j in range(i + 1, num_participants):
@@ -273,11 +362,12 @@ def _generate_dummy_matches(participants: List[ParticipantModel], tournament_for
                 match = MatchModel(
                     participant1_id=p1.id,
                     participant2_id=p2.id,
-                    match_number=match_num_counter # Round number less critical for basic round robin display
+                    match_number=match_num_counter # Using a simple counter for round-robin
                 )
-                matches.append(match)
+                matches_models.append(match)
                 match_num_counter += 1
-    return [m.model_dump() for m in matches] # Return as dicts
+                
+    return [m.model_dump() for m in matches_models]
 
 
 def create_dummy_data():
@@ -294,16 +384,21 @@ def create_dummy_data():
     # For now, let's use some fixed UUIDs for consistency or generate new ones
     user_id_1 = str(uuid.uuid4())
     user_id_2 = str(uuid.uuid4())
+    user_id_aaa = str(uuid.uuid4())
 
     # Create a dummy user for user_id_1 to ensure they exist for ownership checks
     # This is a simplified way, ideally user creation is handled separately.
     users = _load_users()
     if not any(u['id'] == user_id_1 for u in users):
         users.append({"id": user_id_1, "email": "dummyowner1@example.com", "is_active": True, "hashed_password": "fakepasswordhash"})
-        _save_users(users)
     if not any(u['id'] == user_id_2 for u in users):
         users.append({"id": user_id_2, "email": "dummyowner2@example.com", "is_active": True, "hashed_password": "fakepasswordhash"})
-        _save_users(users)
+    if not get_user_by_email_db("aaa@aaa.com"):
+        users.append({"id": user_id_aaa, "email": "aaa@aaa.com", "is_active": True, "hashed_password": "fakepasswordhash"})
+    _save_users(users)
+    
+    user_aaa = get_user_by_email_db("aaa@aaa.com")
+    user_id_aaa = user_aaa['id']
 
 
     # Tournament 1: Beach Volley Knockout
@@ -372,8 +467,32 @@ def create_dummy_data():
     )
     dummy_tournaments_data.append(tournament3.model_dump())
 
+    # Tournament 4: Dummy Elimination Tournament for aaa@aaa.com
+    dummy_players = [
+        ParticipantModel(name="Player 1", email="p1@example.com"),
+        ParticipantModel(name="Player 2", email="p2@example.com"),
+        ParticipantModel(name="Player 3", email="p3@example.com"),
+        ParticipantModel(name="Player 4", email="p4@example.com"),
+        ParticipantModel(name="Player 5", email="p5@example.com"),
+    ]
+    t4_id = str(uuid.uuid4())
+    tournament4 = TournamentModel(
+        id=t4_id,
+        user_id=user_id_aaa,
+        name="Dummy Elimination Tournament",
+        tournament_type="single",
+        format="elimination",
+        start_date=datetime.now(timezone.utc),
+        participants=[p.model_dump() for p in dummy_players],
+        matches=_generate_dummy_matches(dummy_players, "elimination"),
+        registration_open=True,
+        invitation_link=f"{FRONTEND_BASE_URL_FOR_DUMMY_DATA}/join/{str(uuid.uuid4())}"
+    )
+    dummy_tournaments_data.append(tournament4.model_dump())
+
     save_tournaments(dummy_tournaments_data)
     print(f"Saved {len(dummy_tournaments_data)} dummy tournaments to {TOURNAMENTS_FILE}")
+
 
 # Call this function once, perhaps during initial setup, or add a CLI command to trigger it.
 # For example, you could add:
