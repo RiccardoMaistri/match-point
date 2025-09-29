@@ -2,8 +2,8 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 
 const BottomNav = ({ onAdd }) => {
-  const navLinkClasses = "flex flex-col items-center justify-center gap-0.5 text-secondary-text hover:text-primary transition-colors w-1/3 h-full";
-  const activeLinkClasses = "text-primary bg-accent";
+  const navLinkClasses = "flex flex-col items-center justify-center gap-0.5 text-secondary-text hover:text-primary transition-all duration-200 w-1/3 h-full rounded-lg";
+  const activeLinkClasses = "!text-primary bg-primary/10 shadow-sm border border-primary/20";
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 border-t border-accent bg-background shadow-[0_-2px_5px_rgba(0,0,0,0.05)]">

@@ -30,29 +30,29 @@ const Leaderboard = ({ participants, matches }) => {
   }, [participants, matches]);
 
   if (leaderboardData.length === 0) {
-    return <p className="text-sm text-secondary-text py-4 text-center">No completed matches to build a leaderboard yet.</p>;
+    return <p className="text-xs text-secondary-text py-2 text-center">No completed matches to build a leaderboard yet.</p>;
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-accent">
+    <div className="overflow-x-auto rounded border border-accent">
       <table className="min-w-full divide-y divide-accent">
         <thead className="bg-card-background">
           <tr>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-secondary-text uppercase tracking-wider">Rank</th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-secondary-text uppercase tracking-wider">Name</th>
-            <th scope="col" className="px-6 py-3 text-center text-xs font-bold text-secondary-text uppercase tracking-wider">Played</th>
-            <th scope="col" className="px-6 py-3 text-center text-xs font-bold text-secondary-text uppercase tracking-wider">Wins</th>
-            <th scope="col" className="px-6 py-3 text-center text-xs font-bold text-secondary-text uppercase tracking-wider">Losses</th>
+            <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-secondary-text uppercase tracking-wider">Rank</th>
+            <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-secondary-text uppercase tracking-wider">Name</th>
+            <th scope="col" className="px-3 py-2 text-center text-xs font-bold text-secondary-text uppercase tracking-wider">P</th>
+            <th scope="col" className="px-3 py-2 text-center text-xs font-bold text-secondary-text uppercase tracking-wider">W</th>
+            <th scope="col" className="px-3 py-2 text-center text-xs font-bold text-secondary-text uppercase tracking-wider">L</th>
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-accent">
           {leaderboardData.map((player, index) => (
             <tr key={player.id} className="hover:bg-card-background transition-colors">
-              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-primary-text">{index + 1}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-primary-text">{player.name}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-secondary-text">{player.played}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-center font-bold text-green-600">{player.wins}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-red-600">{player.losses}</td>
+              <td className="px-3 py-2 whitespace-nowrap text-xs font-medium text-primary-text">{index + 1}</td>
+              <td className="px-3 py-2 whitespace-nowrap text-xs font-semibold text-primary-text">{player.name}</td>
+              <td className="px-3 py-2 whitespace-nowrap text-xs text-center text-secondary-text">{player.played}</td>
+              <td className="px-3 py-2 whitespace-nowrap text-xs text-center font-bold text-green-600">{player.wins}</td>
+              <td className="px-3 py-2 whitespace-nowrap text-xs text-center text-red-600">{player.losses}</td>
             </tr>
           ))}
         </tbody>

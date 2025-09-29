@@ -9,7 +9,8 @@ import RegisterPage from './components/RegisterPage';
 import JoinTournamentPage from './components/JoinTournamentPage';
 import Header from './components/Header';
 import BottomNav from './components/BottomNav';
-import MyMatches from './components/MyMatches'; // Import MyMatches
+import MyMatches from './components/MyMatches';
+import ConfirmModal from './components/ConfirmModal';
 import * as api from './services/api';
 
 function App() {
@@ -24,6 +25,7 @@ function App() {
   const [authError, setAuthError] = useState(null);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -155,19 +157,24 @@ function App() {
   };
 
   const handleDeleteTournament = async (tournamentId) => {
-    if (!window.confirm('Are you sure you want to delete this tournament?')) {
-      return;
-    }
-    setAppIsLoading(true);
-    setAppError(null);
-    try {
-      await api.deleteTournament(tournamentId);
-      await fetchTournaments();
-    } catch (err) {
-      setAppError(err.message || 'Failed to delete tournament');
-    } finally {
-      setAppIsLoading(false);
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Tournament',
+      message: 'Are you sure you want to delete this tournament? This action cannot be undone.',
+      onConfirm: async () => {
+        setAppIsLoading(true);
+        setAppError(null);
+        try {
+          await api.deleteTournament(tournamentId);
+          await fetchTournaments();
+        } catch (err) {
+          setAppError(err.message || 'Failed to delete tournament');
+        } finally {
+          setAppIsLoading(false);
+        }
+        setConfirmModal({ isOpen: false });
+      }
+    });
   };
 
   const ProtectedRoute = ({ children }) => {
@@ -272,6 +279,13 @@ function App() {
         </main>
       </div>
       {currentUser && <BottomNav onAdd={() => setShowCreateForm(true)} />}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal({ isOpen: false })}
+      />
     </div>
   );
 }

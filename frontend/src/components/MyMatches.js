@@ -110,28 +110,28 @@ const MyMatches = ({ tournaments, currentUser, onResultSubmitted }) => {
   };
 
   return (
-    <div className="p-4">
+    <div className="p-3">
       
       {Object.keys(groupedMatches).length > 0 ? (
-        <div className="space-y-8 max-w-2xl mx-auto">
+        <div className="space-y-6 max-w-2xl mx-auto">
           {Object.values(groupedMatches).map(group => (
             <div key={group.tournamentId} className="bg-white rounded-lg shadow-md">
-              <h2 className="text-xl font-bold text-primary p-4 border-b border-gray-200">{group.tournamentName}</h2>
-              <div className="space-y-4 p-4">
+              <h2 className="text-lg font-bold text-primary p-3 border-b border-gray-200">{group.tournamentName}</h2>
+              <div className="space-y-3 p-3">
                 {group.matches.map(match => {
                   const p1 = match.participants.find(p => p.id === match.participant1_id);
                   const p2 = match.participants.find(p => p.id === match.participant2_id);
                   const isEditing = editingMatchId === match.id;
 
                   return (
-                    <div key={match.id} className="bg-gray-50 rounded-lg p-4 border-l-4 border-primary">
-                      <div className="mt-2">
-                        <p className="text-secondary-text">
+                    <div key={match.id} className="bg-gray-50 rounded-lg p-3 border-l-4 border-primary">
+                      <div className="mt-1">
+                        <p className="text-secondary-text text-sm">
                           <span className={p1?.email === currentUser.email ? 'font-bold' : ''}>{p1 ? p1.name : 'N/A'}</span>
-                          <span className="mx-2">vs</span>
+                          <span className="mx-1">vs</span>
                           <span className={p2?.email === currentUser.email ? 'font-bold' : ''}>{p2 ? p2.name : 'N/A'}</span>
                         </p>
-                        <p className="text-sm text-gray-500 mt-1">
+                        <p className="text-xs text-gray-500 mt-1">
                           Status: <span className="font-semibold capitalize">{match.status.replace('_', ' ')}</span>
                         </p>
                       </div>
@@ -173,11 +173,11 @@ const MyMatches = ({ tournaments, currentUser, onResultSubmitted }) => {
                           </div>
                         </form>
                       ) : (
-                        <div className="mt-4 flex gap-2">
-                          <button onClick={() => handleRecordClick(match)} className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary-hover">
+                        <div className="mt-3 flex gap-2">
+                          <button onClick={() => handleRecordClick(match)} className="px-3 py-1 text-xs font-medium text-white bg-primary rounded hover:bg-primary-hover">
                               Record Result
                           </button>
-                          <Link to={`/tournaments/${match.tournamentId}`} className="px-4 py-2 text-sm font-medium text-primary border border-primary rounded-md hover:bg-primary-lightest">
+                          <Link to={`/tournaments/${match.tournamentId}`} className="px-3 py-1 text-xs font-medium text-primary border border-primary rounded hover:bg-primary-lightest">
                               View Tournament
                           </Link>
                         </div>
@@ -190,8 +190,8 @@ const MyMatches = ({ tournaments, currentUser, onResultSubmitted }) => {
           ))}
         </div>
       ) : (
-        <div className="text-center p-10 bg-white rounded-lg shadow-md max-w-md mx-auto">
-            <p className="text-secondary-text">You have no ongoing matches at the moment.</p>
+        <div className="text-center p-6 bg-white rounded-lg shadow-md max-w-md mx-auto">
+            <p className="text-secondary-text text-sm">You have no ongoing matches at the moment.</p>
         </div>
       )}
     </div>
