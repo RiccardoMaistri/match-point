@@ -1,5 +1,5 @@
 # Tournament Manager Full-Stack App
-
+ddd
 Questa è una web application full-stack per la gestione di tornei sportivi, costruita con React per il frontend e
 FastAPI (Python) per il backend. I dati vengono persistiti su file JSON.
 
