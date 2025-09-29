@@ -7,25 +7,23 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        primary: '#6D28D9',
-        secondary: '#9CA3AF',
-        background: '#F9FAFB',
-        foreground: '#1F2937',
-        accent: '#10B981',
-        muted: '#6B7280',
-        dark: {
-          primary: '#8B5CF6',
-          secondary: '#6B7280',
-          background: '#1F2937',
-          foreground: '#F9FAFB',
-          accent: '#10B981',
-          muted: '#9CA3AF',
+        primary: {
+          DEFAULT: '#0c7ff2',
+          hover: '#0a68c4',
         },
+        'primary-text': '#111418',
+        'secondary-text': '#60758a',
+        background: '#ffffff',
+        'card-background': '#f8f9fa',
+        accent: '#e9ecef',
       },
       fontFamily: {
-        sans: ['Inter', 'sans-serif'],
+        sans: ['Manrope', 'Noto Sans', 'sans-serif'],
       },
     },
   },
-  plugins: [],
+  plugins: [
+    require('@tailwindcss/forms'),
+    require('@tailwindcss/container-queries'),
+  ],
 }

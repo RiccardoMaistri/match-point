@@ -7,19 +7,9 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from pydantic import BaseModel, EmailStr
 
-# Will get these from main.py or a config file later
-# For now, keep them here for Authlib's Google OAuth integration
-# to be able to import them if it's initialized before main.py fully loads config.
-# This is a bit of a workaround for now.
 SECRET_KEY = "your-secret-key"  # Replace with a strong, randomly generated key
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
-
-# Configuration for Google OAuth (to be moved to a config file or env vars)
-GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID"  # Replace with your Google Client ID
-GOOGLE_CLIENT_SECRET = "YOUR_GOOGLE_CLIENT_SECRET"  # Replace with your Google Client Secret
-# This should match the authorized redirect URI in your Google Cloud Console
-GOOGLE_REDIRECT_URI = "http://localhost:8001/auth/google"
 
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -99,7 +89,7 @@ async def get_optional_current_active_user(token: Optional[str] = Depends(oauth2
             # If token is present but invalid (e.g. no sub), it's an error,
             # but for optional auth, we might just return None or let it pass if not critical.
             # However, if a token IS provided, it SHOULD be valid.
-            # For simplicity, if token is bad, we can let it raise here or return None.
+            # For simplicity, if a token is bad, we can let it raise here or return None.
             # Let's treat a bad token as if no token was provided for "optional" user.
             return None # Or raise HTTPException(status_code=401, detail="Invalid token for optional user")
 

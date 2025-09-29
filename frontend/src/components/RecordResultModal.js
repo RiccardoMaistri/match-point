@@ -5,7 +5,12 @@ const getParticipantById = (participantId, participants) => {
 };
 
 function RecordResultModal({ isOpen, onClose, match, participants, onSubmitResult, tournamentId }) {
-  const [scores, setScores] = useState({});
+  const [scores, setScores] = useState({
+    score1_set1: '',
+    score2_set1: '',
+    score1_set2: '',
+    score2_set2: '',
+  });
   const [winnerId, setWinnerId] = useState('');
   const [error, setError] = useState('');
 
@@ -15,17 +20,20 @@ function RecordResultModal({ isOpen, onClose, match, participants, onSubmitResul
   useEffect(() => {
     if (match) {
       setScores({
-        score1: match.score_participant1 ?? '',
-        score2: match.score_participant2 ?? '',
-        set1Score1: match.set1_score_participant1 ?? '',
-        set1Score2: match.set1_score_participant2 ?? '',
-        set2Score1: match.set2_score_participant1 ?? '',
-        set2Score2: match.set2_score_participant2 ?? '',
+        score1_set1: match.score_participant1_set1 ?? '',
+        score2_set1: match.score_participant2_set1 ?? '',
+        score1_set2: match.score_participant1_set2 ?? '',
+        score2_set2: match.score_participant2_set2 ?? '',
       });
       setWinnerId(match.winner_id || '');
       setError('');
     } else {
-      setScores({});
+      setScores({
+        score1_set1: '',
+        score2_set1: '',
+        score1_set2: '',
+        score2_set2: '',
+      });
       setWinnerId('');
       setError('');
     }
@@ -37,11 +45,11 @@ function RecordResultModal({ isOpen, onClose, match, participants, onSubmitResul
 
   if (!participant1 || !participant2) {
     return (
-      <div className="fixed inset-0 bg-gray-900/75 z-50 flex justify-center items-center p-4">
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl max-w-sm w-full">
-          <h3 className="text-lg font-semibold text-red-600 dark:text-red-400">Error</h3>
-          <p className="text-gray-700 dark:text-gray-300 mt-2">Participant data for this match is missing.</p>
-          <button onClick={onClose} className="mt-4 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600">
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-background p-6 rounded-xl shadow-xl max-w-sm w-full">
+          <h3 className="text-lg font-semibold text-red-500">Error</h3>
+          <p className="text-secondary-text mt-2">Participant data for this match is missing.</p>
+          <button onClick={onClose} className="mt-4 px-4 py-2 bg-accent text-secondary-text rounded-lg hover:bg-gray-300">
             Close
           </button>
         </div>
@@ -70,85 +78,63 @@ function RecordResultModal({ isOpen, onClose, match, participants, onSubmitResul
       }
     }
 
-    if ((parsedScores.set2Score1 !== null || parsedScores.set2Score2 !== null) && (parsedScores.set1Score1 === null || parsedScores.set1Score2 === null)) {
-      setError('Set 1 scores are required to enter Set 2 scores.');
-      return;
-    }
-
     if (winnerId && winnerId !== match.participant1_id && winnerId !== match.participant2_id) {
       setError('Selected winner is not part of this match.');
       return;
     }
 
     const resultData = {
-      score_participant1: parsedScores.score1,
-      score_participant2: parsedScores.score2,
-      set1_score_participant1: parsedScores.set1Score1,
-      set1_score_participant2: parsedScores.set1Score2,
-      set2_score_participant1: parsedScores.set2Score1,
-      set2_score_participant2: parsedScores.set2Score2,
-      winner_id: winnerId || null,
+        score_participant1_set1: parsedScores.score1_set1,
+        score_participant2_set1: parsedScores.score2_set1,
+        score_participant1_set2: parsedScores.score1_set2,
+        score_participant2_set2: parsedScores.score2_set2,
+        winner_id: winnerId || null,
     };
     onSubmitResult(tournamentId, match.id, resultData);
   };
 
-  const inputClasses = "mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm transition-colors";
-  const labelClasses = "block text-sm font-medium text-gray-700 dark:text-gray-300";
-  const scoreGroupClasses = "grid grid-cols-1 sm:grid-cols-2 gap-4";
-  const scoreHeaderClasses = "text-md font-semibold text-gray-800 dark:text-gray-200 pt-2";
+  const inputClasses = "mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary sm:text-sm";
+  const labelClasses = "block text-sm font-medium text-primary-text";
 
   return (
-    <div className="fixed inset-0 bg-gray-900/75 backdrop-blur-sm z-50 flex justify-center items-center p-4 transition-opacity duration-300 ease-in-out">
-      <div className="relative bg-white dark:bg-gray-800 w-full max-w-lg p-6 sm:p-8 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 transform transition-all duration-300 ease-in-out">
+    <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-50 flex justify-center items-center p-4">
+      <div className="relative bg-background w-full max-w-lg p-6 sm:p-8 rounded-xl shadow-2xl border border-accent">
         <div className="flex justify-between items-start mb-4">
-          <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Record Result</h3>
-          <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors rounded-full">
+          <h3 className="text-2xl font-bold text-primary-text">Record Result</h3>
+          <button onClick={onClose} className="p-1 text-secondary-text hover:text-primary-text transition-colors rounded-full">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
           </button>
         </div>
 
-        <div className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-          <p>Match: <span className="font-semibold text-gray-800 dark:text-gray-200">{participant1.name}</span> vs <span className="font-semibold text-gray-800 dark:text-gray-200">{participant2.name}</span></p>
+        <div className="text-sm text-secondary-text mb-4">
+          <p>Match: <span className="font-semibold text-primary-text">{participant1.name}</span> vs <span className="font-semibold text-primary-text">{participant2.name}</span></p>
           {match.round_number && <p className="text-xs">Round: {match.round_number} | Match: {match.match_number}</p>}
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {error && <p className="text-sm text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/50 p-3 rounded-lg border border-red-200 dark:border-red-800">{error}</p>}
+          {error && <p className="text-sm text-red-700 bg-red-100 p-3 rounded-lg border border-red-200">{error}</p>}
 
           <div className="space-y-4">
-            <h4 className={scoreHeaderClasses}>Total Score</h4>
-            <div className={scoreGroupClasses}>
+            <h4 className="text-md font-semibold text-primary-text pt-2">Set 1</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label htmlFor="score1" className={labelClasses}>Score ({participant1.name})</label>
-                <input type="number" name="score1" id="score1" value={scores.score1} onChange={handleScoreChange} min="0" className={inputClasses} placeholder="e.g., 2" />
+                <label htmlFor="score1_set1" className={labelClasses}>Score ({participant1.name})</label>
+                <input type="number" name="score1_set1" id="score1_set1" value={scores.score1_set1} onChange={handleScoreChange} min="0" className={inputClasses} placeholder="e.g., 6" />
               </div>
               <div>
-                <label htmlFor="score2" className={labelClasses}>Score ({participant2.name})</label>
-                <input type="number" name="score2" id="score2" value={scores.score2} onChange={handleScoreChange} min="0" className={inputClasses} placeholder="e.g., 0" />
-              </div>
-            </div>
-
-            <h4 className={scoreHeaderClasses}>Set 1 (Required)</h4>
-            <div className={scoreGroupClasses}>
-              <div>
-                <label htmlFor="set1Score1" className={labelClasses}>Set 1 ({participant1.name})</label>
-                <input type="number" name="set1Score1" id="set1Score1" value={scores.set1Score1} onChange={handleScoreChange} min="0" className={inputClasses} placeholder="e.g., 6" />
-              </div>
-              <div>
-                <label htmlFor="set1Score2" className={labelClasses}>Set 2 ({participant2.name})</label>
-                <input type="number" name="set1Score2" id="set1Score2" value={scores.set1Score2} onChange={handleScoreChange} min="0" className={inputClasses} placeholder="e.g., 4" />
+                <label htmlFor="score2_set1" className={labelClasses}>Score ({participant2.name})</label>
+                <input type="number" name="score2_set1" id="score2_set1" value={scores.score2_set1} onChange={handleScoreChange} min="0" className={inputClasses} placeholder="e.g., 4" />
               </div>
             </div>
-
-            <h4 className={scoreHeaderClasses}>Set 2 (Optional)</h4>
-            <div className={scoreGroupClasses}>
+            <h4 className="text-md font-semibold text-primary-text pt-2">Set 2</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label htmlFor="set2Score1" className={labelClasses}>Set 2 ({participant1.name})</label>
-                <input type="number" name="set2Score1" id="set2Score1" value={scores.set2Score1} onChange={handleScoreChange} min="0" className={inputClasses} placeholder="e.g., 6" />
+                <label htmlFor="score1_set2" className={labelClasses}>Score ({participant1.name})</label>
+                <input type="number" name="score1_set2" id="score1_set2" value={scores.score1_set2} onChange={handleScoreChange} min="0" className={inputClasses} placeholder="e.g., 6" />
               </div>
               <div>
-                <label htmlFor="set2Score2" className={labelClasses}>Set 2 ({participant2.name})</label>
-                <input type="number" name="set2Score2" id="set2Score2" value={scores.set2Score2} onChange={handleScoreChange} min="0" className={inputClasses} placeholder="e.g., 2" />
+                <label htmlFor="score2_set2" className={labelClasses}>Score ({participant2.name})</label>
+                <input type="number" name="score2_set2" id="score2_set2" value={scores.score2_set2} onChange={handleScoreChange} min="0" className={inputClasses} placeholder="e.g., 4" />
               </div>
             </div>
           </div>
@@ -160,14 +146,14 @@ function RecordResultModal({ isOpen, onClose, match, participants, onSubmitResul
               <option value={participant1.id}>{participant1.name}</option>
               <option value={participant2.id}>{participant2.name}</option>
             </select>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">Select a winner to override auto-detection based on scores.</p>
+            <p className="text-xs text-secondary-text mt-1.5">Select a winner to override auto-detection based on scores.</p>
           </div>
 
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-4">
-            <button type="button" onClick={onClose} className="px-6 py-2 text-sm font-semibold text-gray-800 dark:text-gray-200 bg-gray-200 dark:bg-gray-600 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors">
+            <button type="button" onClick={onClose} className="px-6 py-2 text-sm font-semibold text-secondary-text bg-accent rounded-lg hover:bg-gray-300 transition-colors">
               Cancel
             </button>
-            <button type="submit" className="px-6 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-sm transition-colors">
+            <button type="submit" className="px-6 py-2 text-sm font-semibold text-white bg-primary rounded-lg hover:bg-primary-hover shadow-sm transition-colors">
               Save Result
             </button>
           </div>

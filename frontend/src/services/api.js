@@ -152,7 +152,7 @@ export const joinTournamentAuthenticated = async (tournamentId) => {
 // --- Auth Endpoints ---
 
 export const registerUser = async (userData) => {
-  // userData: { email, password }
+  // userData: { email, password, username }
   const response = await fetch(`${API_BASE_URL}/users/register`, {
     method: 'POST',
     headers: {
@@ -163,9 +163,9 @@ export const registerUser = async (userData) => {
   return handleResponse(response); // Expects User object without password
 };
 
-export const loginUser = async (email, password) => {
+export const loginUser = async (usernameOrEmail, password) => {
   const formData = new URLSearchParams();
-  formData.append('username', email); // FastAPI's OAuth2PasswordRequestForm expects 'username'
+  formData.append('username', usernameOrEmail); // FastAPI's OAuth2PasswordRequestForm expects 'username'
   formData.append('password', password);
 
   const response = await fetch(`${API_BASE_URL}/token`, {
