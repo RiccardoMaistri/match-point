@@ -14,7 +14,7 @@ from auth import (
     get_password_hash,
     verify_password,
 )
-from database import (
+from database_adapter import (
     create_tournament_db,
     create_user_db,
     delete_tournament_db,
