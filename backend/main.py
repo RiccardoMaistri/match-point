@@ -1,5 +1,5 @@
 import uuid
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from fastapi import Body, Depends, FastAPI, HTTPException, Path, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from typing import List, Optional
@@ -396,67 +396,64 @@ async def generate_matches_for_tournament(
             detail="Not enough participants to generate matches.",
         )
 
+    from datetime import timedelta
+    
     tournament.matches = []
     tournament.status = "in_progress"
-    if tournament.format == "elimination":
-        num_participants = len(tournament.participants)
-        if num_participants % 2 == 0:
-            for i in range(0, num_participants, 2):
-                p1 = tournament.participants[i]
-                p2 = tournament.participants[i + 1]
-                match = Match(
-                    participant1_id=p1.id,
-                    participant2_id=p2.id,
-                    round_number=1,
-                    match_number=(i // 2) + 1,
-                )
-                tournament.matches.append(match)
-        else:
-            tournament.matches.append(
-                Match(
-                    participant1_id=tournament.participants[0].id,
-                    is_bye=True,
-                    round_number=1,
-                    match_number=1,
-                )
-            )
-            for i in range(1, num_participants, 2):
-                if i + 1 < num_participants:
-                    p1 = tournament.participants[i]
-                    p2 = tournament.participants[i + 1]
+    
+    # Only round_robin format supported
+    if tournament.format == "round_robin":
+        participants = tournament.participants[:]
+        num_participants = len(participants)
+        
+        # Calculate total matchdays (each player plays each other once)
+        total_matches = (num_participants * (num_participants - 1)) // 2
+        matches_per_day = num_participants // 2
+        tournament.total_matchdays = (total_matches + matches_per_day - 1) // matches_per_day
+        
+        # Generate round-robin schedule using circle method
+        if num_participants % 2 == 1:
+            participants.append(None)  # Add dummy for odd number
+            num_participants += 1
+        
+        match_num = 1
+        base_date = tournament.start_date or datetime.now(timezone.utc)
+        
+        for matchday in range(num_participants - 1):
+            matchday_date = base_date + timedelta(days=matchday * tournament.match_frequency_days)
+            
+            for i in range(num_participants // 2):
+                p1_idx = i
+                p2_idx = num_participants - 1 - i
+                
+                p1 = participants[p1_idx]
+                p2 = participants[p2_idx]
+                
+                if p1 is not None and p2 is not None:
                     match = Match(
                         participant1_id=p1.id,
                         participant2_id=p2.id,
-                        round_number=1,
-                        match_number=((i - 1) // 2) + 2,
+                        match_number=match_num,
+                        match_day=matchday + 1,
+                        phase='group',
+                        scheduled_date=matchday_date,
                     )
                     tournament.matches.append(match)
-
-    elif tournament.format == "round_robin":
-        participants_shuffled = tournament.participants[:]
-        num_participants = len(participants_shuffled)
-        match_num_counter = 1
-        for i in range(num_participants):
-            for j in range(i + 1, num_participants):
-                p1 = participants_shuffled[i]
-                p2 = participants_shuffled[j]
-                match = Match(
-                    participant1_id=p1.id,
-                    participant2_id=p2.id,
-                    match_number=match_num_counter,
-                )
-                tournament.matches.append(match)
-                match_num_counter += 1
+                    match_num += 1
+            
+            # Rotate participants (keep first fixed)
+            participants = [participants[0]] + [participants[-1]] + participants[1:-1]
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Tournament format not supported for match generation yet.",
+            detail="Only round_robin format is supported.",
         )
 
     update_tournament_db(tournament_id, tournament.model_dump())
     return {
-        "message": "Matches generated (placeholder logic)",
+        "message": "Group stage matches generated",
         "tournament_id": tournament_id,
+        "total_matchdays": tournament.total_matchdays,
         "matches": tournament.matches,
     }
 
@@ -570,6 +567,44 @@ async def record_match_result(
 
     tournament.matches[match_index] = match_to_update
 
+    # Check if playoff match and advance bracket if round completed
+    if match_to_update.phase == 'playoff' and match_to_update.status == 'completed':
+        current_round = match_to_update.round_number
+        playoff_matches = [m for m in tournament.matches if m.phase == 'playoff']
+        max_round = max((m.round_number for m in playoff_matches), default=1)
+        
+        # Check if all matches in current round are completed
+        current_round_matches = [m for m in playoff_matches if m.round_number == current_round]
+        if all(m.status == 'completed' for m in current_round_matches):
+            # Generate next round if not final
+            if current_round < max_round or len(current_round_matches) > 1:
+                next_round = current_round + 1
+                next_round_matches = [m for m in playoff_matches if m.round_number == next_round]
+                
+                # Only create next round if it doesn't exist
+                if not next_round_matches:
+                    match_num = max((m.match_number for m in tournament.matches), default=0) + 1
+                    
+                    # Pair winners from current round
+                    for i in range(0, len(current_round_matches), 2):
+                        if i + 1 < len(current_round_matches):
+                            match1 = current_round_matches[i]
+                            match2 = current_round_matches[i + 1]
+                            
+                            if match1.winner_id and match2.winner_id:
+                                new_match = Match(
+                                    participant1_id=match1.winner_id,
+                                    participant2_id=match2.winner_id,
+                                    match_number=match_num,
+                                    round_number=next_round,
+                                    phase='playoff',
+                                )
+                                tournament.matches.append(new_match)
+                                match_num += 1
+            elif len(current_round_matches) == 1:
+                # Final match completed
+                tournament.status = "completed"
+
     all_matches_completed = all(m.status == "completed" for m in tournament.matches)
     if all_matches_completed:
         tournament.status = "completed"
@@ -637,6 +672,182 @@ async def get_tournament_schedule(
 
 
 @app.get(
+    "/tournaments/{tournament_id}/standings",
+    summary="Get current tournament standings",
+)
+async def get_tournament_standings(
+    tournament_id: str = Path(..., description="ID del torneo"),
+):
+    """
+    Returns current standings for round robin group stage.
+    """
+    tournament_dict = get_tournament_db(tournament_id)
+    if not tournament_dict:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found"
+        )
+
+    tournament = Tournament(**tournament_dict)
+    
+    # Calculate standings from group stage matches
+    standings = {}
+    for p in tournament.participants:
+        standings[p.id] = {
+            "participant": p,
+            "played": 0,
+            "wins": 0,
+            "losses": 0,
+            "score_for": 0,
+            "score_against": 0,
+        }
+    
+    for match in tournament.matches:
+        if match.phase == 'group' and match.status == 'completed':
+            if match.participant1_id in standings:
+                standings[match.participant1_id]["played"] += 1
+                if match.score_participant1 is not None:
+                    standings[match.participant1_id]["score_for"] += match.score_participant1
+                if match.score_participant2 is not None:
+                    standings[match.participant1_id]["score_against"] += match.score_participant2
+            
+            if match.participant2_id in standings:
+                standings[match.participant2_id]["played"] += 1
+                if match.score_participant2 is not None:
+                    standings[match.participant2_id]["score_for"] += match.score_participant2
+                if match.score_participant1 is not None:
+                    standings[match.participant2_id]["score_against"] += match.score_participant1
+            
+            if match.winner_id:
+                if match.winner_id in standings:
+                    standings[match.winner_id]["wins"] += 1
+                
+                loser_id = match.participant2_id if match.winner_id == match.participant1_id else match.participant1_id
+                if loser_id in standings:
+                    standings[loser_id]["losses"] += 1
+    
+    # Sort by wins (descending)
+    sorted_standings = sorted(
+        standings.values(),
+        key=lambda x: x["wins"],
+        reverse=True
+    )
+    
+    return {"standings": sorted_standings}
+
+
+@app.post(
+    "/tournaments/{tournament_id}/generate-playoffs",
+    summary="Generate playoff bracket from group stage",
+)
+async def generate_playoffs(
+    tournament_id: str = Path(..., description="ID del torneo"),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Generates playoff bracket based on group stage standings.
+    """
+    tournament_dict = get_tournament_db(tournament_id)
+    if not tournament_dict:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found"
+        )
+
+    tournament = Tournament(**tournament_dict)
+
+    if tournament.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to generate playoffs for this tournament",
+        )
+
+    if tournament.status == "playoffs":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Playoffs already generated",
+        )
+
+    # Check if all group stage matches are completed
+    group_matches = [m for m in tournament.matches if m.phase == 'group']
+    if not all(m.status == 'completed' for m in group_matches):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="All group stage matches must be completed first",
+        )
+
+    # Get standings
+    standings_response = await get_tournament_standings(tournament_id)
+    standings = standings_response["standings"]
+    
+    # Get top N qualifiers
+    qualifiers = standings[:tournament.playoff_participants]
+    
+    if len(qualifiers) < tournament.playoff_participants:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Not enough participants for playoffs. Need {tournament.playoff_participants}, have {len(qualifiers)}",
+        )
+
+    # Generate single elimination bracket
+    playoff_round = 1
+    match_num = len(tournament.matches) + 1
+    
+    # Pair qualifiers: 1 vs N, 2 vs N-1, etc.
+    for i in range(len(qualifiers) // 2):
+        p1 = qualifiers[i]["participant"]
+        p2 = qualifiers[len(qualifiers) - 1 - i]["participant"]
+        
+        match = Match(
+            participant1_id=p1.id,
+            participant2_id=p2.id,
+            match_number=match_num,
+            round_number=playoff_round,
+            phase='playoff',
+        )
+        tournament.matches.append(match)
+        match_num += 1
+
+    tournament.status = "playoffs"
+    update_tournament_db(tournament_id, tournament.model_dump())
+    
+    return {
+        "message": "Playoff bracket generated",
+        "qualifiers": len(qualifiers),
+        "playoff_matches": [m for m in tournament.matches if m.phase == 'playoff'],
+    }
+
+
+@app.get(
+    "/tournaments/{tournament_id}/matchday/{matchday}",
+    summary="Get matches for a specific matchday",
+)
+async def get_matchday_matches(
+    tournament_id: str = Path(..., description="ID del torneo"),
+    matchday: int = Path(..., description="Matchday number"),
+):
+    """
+    Returns all matches for a specific matchday.
+    """
+    tournament_dict = get_tournament_db(tournament_id)
+    if not tournament_dict:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found"
+        )
+
+    tournament = Tournament(**tournament_dict)
+    
+    matchday_matches = [
+        m for m in tournament.matches 
+        if m.match_day == matchday and m.phase == 'group'
+    ]
+    
+    return {
+        "matchday": matchday,
+        "total_matchdays": tournament.total_matchdays,
+        "matches": matchday_matches,
+    }
+
+
+@app.get(
     "/tournaments/{tournament_id}/results",
     summary="Ottieni i risultati finali di un torneo",
 )
@@ -655,39 +866,28 @@ async def get_tournament_results(
     tournament = Tournament(**tournament_dict)
 
     results = []
-    if tournament.format == "elimination":
-        final_match = None
-        for match in tournament.matches:
-            if match.round_number == max(
-                m.round_number for m in tournament.matches if m.round_number is not None
-            ):
-                final_match = match
-                break
-        if final_match and final_match.winner_id:
-            winner = next(
-                (p for p in tournament.participants if p.id == final_match.winner_id),
-                None,
-            )
-            if winner:
-                results.append({"participant": winner.name, "rank": 1})
-    elif tournament.format == "round_robin":
-        participant_wins = {p.id: 0 for p in tournament.participants}
-        for match in tournament.matches:
-            if match.winner_id:
-                participant_wins[match.winner_id] += 1
-
-        sorted_participants = sorted(
-            participant_wins.items(), key=lambda item: item[1], reverse=True
-        )
-
-        for i, (participant_id, wins) in enumerate(sorted_participants):
-            participant = next(
-                (p for p in tournament.participants if p.id == participant_id), None
-            )
-            if participant:
-                results.append(
-                    {"participant": participant.name, "rank": i + 1, "wins": wins}
+    if tournament.status == "completed":
+        # Find playoff winner
+        playoff_matches = [m for m in tournament.matches if m.phase == 'playoff']
+        if playoff_matches:
+            final_match = max(playoff_matches, key=lambda m: m.round_number or 0)
+            if final_match.winner_id:
+                winner = next(
+                    (p for p in tournament.participants if p.id == final_match.winner_id),
+                    None,
                 )
+                if winner:
+                    results.append({"participant": winner.name, "rank": 1})
+    
+    # Add group stage standings
+    standings_response = await get_tournament_standings(tournament_id)
+    for i, standing in enumerate(standings_response["standings"]):
+        if not any(r["participant"] == standing["participant"].name for r in results):
+            results.append({
+                "participant": standing["participant"].name,
+                "rank": len(results) + 1,
+                "wins": standing["wins"],
+            })
 
     return results
 

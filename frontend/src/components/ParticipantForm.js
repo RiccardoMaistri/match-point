@@ -109,7 +109,7 @@ function ParticipantForm({ tournamentId, onSubmit, onCancel, existingParticipant
           )}
           <button
             type="submit"
-            className="px-3 py-1 text-xs font-semibold text-white bg-green-600 rounded hover:bg-green-700 shadow-sm transition-colors"
+            className="px-3 py-1 text-xs font-semibold text-white bg-primary rounded hover:bg-primary-hover shadow-sm transition-colors"
           >
             Add
           </button>

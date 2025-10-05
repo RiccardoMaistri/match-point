@@ -3,9 +3,11 @@ import React, { useState, useEffect } from 'react';
 const INITIAL_FORM_STATE = {
   name: '',
   tournament_type: 'single',
-  format: 'elimination',
+  format: 'round_robin',
   start_date: '',
   end_date: '',
+  match_frequency_days: 7,
+  playoff_participants: 4,
 };
 
 function TournamentForm({ onSubmit, initialData = null, onCancel }) {
@@ -17,9 +19,11 @@ function TournamentForm({ onSubmit, initialData = null, onCancel }) {
       setFormData({
         name: initialData.name || '',
         tournament_type: initialData.tournament_type || 'single',
-        format: initialData.format || 'elimination',
+        format: 'round_robin',
         start_date: initialData.start_date ? new Date(initialData.start_date).toISOString().split('T')[0] : '',
         end_date: initialData.end_date ? new Date(initialData.end_date).toISOString().split('T')[0] : '',
+        match_frequency_days: initialData.match_frequency_days || 7,
+        playoff_participants: initialData.playoff_participants || 4,
       });
       setIsEditing(true);
     } else {
@@ -102,45 +106,51 @@ function TournamentForm({ onSubmit, initialData = null, onCancel }) {
             </div>
 
             <div>
-              <label htmlFor="format" className={labelClasses}>
-                Format <span className="text-red-500">*</span>
+              <label htmlFor="playoff_participants" className={labelClasses}>
+                Playoff Qualifiers <span className="text-red-500">*</span>
               </label>
               <select
-                name="format"
-                id="format"
-                value={formData.format}
+                name="playoff_participants"
+                id="playoff_participants"
+                value={formData.playoff_participants}
                 onChange={handleChange}
                 className={inputClasses}
               >
-                <option value="elimination">Direct Elimination</option>
-                <option value="round_robin">Round Robin</option>
+                <option value="4">4 Players</option>
+                <option value="6">6 Players</option>
+                <option value="8">8 Players</option>
               </select>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label htmlFor="start_date" className={labelClasses}>Start Date (Optional)</label>
-              <input
-                type="date"
-                name="start_date"
-                id="start_date"
-                value={formData.start_date}
-                onChange={handleChange}
-                className={inputClasses}
-              />
-            </div>
-            <div>
-              <label htmlFor="end_date" className={labelClasses}>End Date (Optional)</label>
-              <input
-                type="date"
-                name="end_date"
-                id="end_date"
-                value={formData.end_date}
-                onChange={handleChange}
-                className={inputClasses}
-              />
-            </div>
+          <div>
+            <label htmlFor="match_frequency_days" className={labelClasses}>
+              Days Between Matchdays <span className="text-red-500">*</span>
+            </label>
+            <select
+              name="match_frequency_days"
+              id="match_frequency_days"
+              value={formData.match_frequency_days}
+              onChange={handleChange}
+              className={inputClasses}
+            >
+              <option value="1">1 Day</option>
+              <option value="3">3 Days</option>
+              <option value="7">7 Days (Weekly)</option>
+              <option value="14">14 Days (Bi-weekly)</option>
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="start_date" className={labelClasses}>Start Date (Optional)</label>
+            <input
+              type="date"
+              name="start_date"
+              id="start_date"
+              value={formData.start_date}
+              onChange={handleChange}
+              className={inputClasses}
+            />
           </div>
 
           <div className="flex justify-end space-x-4 pt-4">

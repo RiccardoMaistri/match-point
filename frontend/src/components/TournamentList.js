@@ -18,7 +18,9 @@ const TournamentList = ({ tournaments, onView }) => {
       )}
       <div className="grid gap-4 px-4">
         {activeTournaments.map((tournament) => (
-          <TournamentCard key={tournament.id} tournament={tournament} onView={onView} />
+          <div key={tournament.id} onClick={() => onView(tournament.id)} className="cursor-pointer">
+            <TournamentCard tournament={tournament} onView={onView} />
+          </div>
         ))}
       </div>
 
@@ -29,7 +31,9 @@ const TournamentList = ({ tournaments, onView }) => {
       )}
       <div className="grid gap-4 px-4">
         {pastTournaments.map((tournament) => (
-          <TournamentCard key={tournament.id} tournament={tournament} onView={onView} />
+          <div key={tournament.id} onClick={() => onView(tournament.id)} className="cursor-pointer">
+            <TournamentCard tournament={tournament} onView={onView} />
+          </div>
         ))}
       </div>
     </div>

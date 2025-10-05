@@ -9,7 +9,8 @@ import RegisterPage from './components/RegisterPage';
 import JoinTournamentPage from './components/JoinTournamentPage';
 import Header from './components/Header';
 import BottomNav from './components/BottomNav';
-import MyMatches from './components/MyMatches';
+import Standings from './components/Standings';
+import Participants from './components/Participants';
 import ConfirmModal from './components/ConfirmModal';
 import * as api from './services/api';
 
@@ -102,7 +103,12 @@ function App() {
     setAppError(null);
     try {
       const data = await api.getTournaments();
-      setTournaments(data);
+      const sorted = data.sort((a, b) => {
+        const dateA = new Date(a.start_date || 0);
+        const dateB = new Date(b.start_date || 0);
+        return dateB - dateA;
+      });
+      setTournaments(sorted);
     } catch (err) {
       setAppError(err.message || 'Failed to fetch tournaments');
     } finally {
@@ -111,12 +117,18 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (currentUser && (location.pathname === '/' || location.pathname === '/matches')) {
+    if (currentUser) {
         fetchTournaments();
-    } else if (!currentUser && (location.pathname === '/' || location.pathname === '/matches')) {
+    } else {
         setTournaments([]);
     }
-  }, [fetchTournaments, currentUser, location.pathname]);
+  }, [fetchTournaments, currentUser]);
+
+  useEffect(() => {
+    if (currentUser && tournaments.length > 0 && location.pathname === '/') {
+      navigate(`/tournaments/${tournaments[0].id}`, { replace: true });
+    }
+  }, [currentUser, tournaments, location.pathname, navigate]);
 
   const handleCreateTournamentSubmit = async (tournamentData) => {
     setAppIsLoading(true);
@@ -204,10 +216,43 @@ function App() {
     return <p className="text-center py-10">Initializing app...</p>;
   }
 
+  const getCurrentTournamentId = () => {
+    if (location.pathname.startsWith('/tournaments/')) {
+      return location.pathname.split('/')[2];
+    }
+    if (location.pathname.startsWith('/standings/')) {
+      return location.pathname.split('/')[2];
+    }
+    if (location.pathname.startsWith('/participants/')) {
+      return location.pathname.split('/')[2];
+    }
+    return null;
+  };
+
+  const currentTournamentId = getCurrentTournamentId();
+
+  const handleTournamentChange = (tournamentId) => {
+    if (location.pathname.startsWith('/tournaments/')) {
+      navigate(`/tournaments/${tournamentId}`);
+    } else if (location.pathname.startsWith('/standings/')) {
+      navigate(`/standings/${tournamentId}`);
+    } else if (location.pathname.startsWith('/participants/')) {
+      navigate(`/participants/${tournamentId}`);
+    } else {
+      navigate(`/tournaments/${tournamentId}`);
+    }
+  };
+
   return (
     <div className="relative flex size-full min-h-screen flex-col justify-between group/design-root overflow-x-hidden bg-background">
       <div className="flex-grow">
-        <Header title="My Tournaments" />
+        <Header 
+          title="My Tournaments" 
+          tournaments={currentUser ? tournaments : null}
+          currentTournamentId={currentTournamentId}
+          onTournamentChange={handleTournamentChange}
+          onAdd={currentUser ? () => setShowCreateForm(true) : null}
+        />
         {showCreateForm && (
           <TournamentForm
             onSubmit={editingTournament ? handleUpdateTournamentSubmit : handleCreateTournamentSubmit}
@@ -247,17 +292,28 @@ function App() {
             } />
              <Route path="/" element={
               <ProtectedRoute>
-                <TournamentList
-                  tournaments={tournaments}
-                  onEdit={handleEditTournamentClick}
-                  onDelete={handleDeleteTournament}
-                  onView={(id) => navigate(`/tournaments/${id}`)}
-                />
+                <div className="text-center py-10">Loading...</div>
               </ProtectedRoute>
             } />
-            <Route path="/matches" element={
+
+            <Route path="/standings/:tournamentId" element={
               <ProtectedRoute>
-                <MyMatches tournaments={tournaments} currentUser={currentUser} onResultSubmitted={fetchTournaments} />
+                <Standings tournaments={tournaments} />
+              </ProtectedRoute>
+            } />
+            <Route path="/standings" element={
+              <ProtectedRoute>
+                <Standings tournaments={tournaments} />
+              </ProtectedRoute>
+            } />
+            <Route path="/participants/:tournamentId" element={
+              <ProtectedRoute>
+                <Participants currentUser={currentUser} />
+              </ProtectedRoute>
+            } />
+            <Route path="/participants" element={
+              <ProtectedRoute>
+                <Participants currentUser={currentUser} />
               </ProtectedRoute>
             } />
             <Route path="/tournaments/:tournamentId" element={
@@ -278,7 +334,7 @@ function App() {
           </Routes>
         </main>
       </div>
-      {currentUser && <BottomNav onAdd={() => setShowCreateForm(true)} />}
+      {currentUser && <BottomNav />}
       <ConfirmModal
         isOpen={confirmModal.isOpen}
         title={confirmModal.title}

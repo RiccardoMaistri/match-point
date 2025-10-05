@@ -125,6 +125,18 @@ export const getTournamentResults = async (tournamentId) => {
     return authenticatedFetch(`${API_BASE_URL}/tournaments/${tournamentId}/results`, 'GET');
 };
 
+export const getTournamentStandings = async (tournamentId) => {
+    return authenticatedFetch(`${API_BASE_URL}/tournaments/${tournamentId}/standings`, 'GET');
+};
+
+export const generatePlayoffs = async (tournamentId) => {
+    return authenticatedFetch(`${API_BASE_URL}/tournaments/${tournamentId}/generate-playoffs`, 'POST');
+};
+
+export const getMatchdayMatches = async (tournamentId, matchday) => {
+    return authenticatedFetch(`${API_BASE_URL}/tournaments/${tournamentId}/matchday/${matchday}`, 'GET');
+};
+
 
 // --- Specific view endpoints (Bracket/Schedule) ---
 // Assuming these might require authentication
@@ -184,4 +196,4 @@ export const getCurrentUserDetails = async () => {
 };
 
 
-export { API_BASE_URL }; // Esporta anche API_BASE_URL se serve altrove direttamente.
+export { API_BASE_URL };
