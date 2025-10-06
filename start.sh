@@ -17,6 +17,7 @@ FRONTEND_PID=$!
 
 echo "Backend running and accessible on your network at port 8001"
 echo "Frontend running on http://localhost:3000"
+echo "PWA enabled - Install the app from your browser!"
 echo "Press Ctrl+C to stop both servers"
 
 # Function to cleanup processes

@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import * as api from '../services/api';
-import MatchList from './MatchList';
 import RecordResultModal from './RecordResultModal';
-import Leaderboard from './Leaderboard';
 import Bracket from './Bracket';
 import ConfirmModal from './ConfirmModal';
+import MatchdayView from './MatchdayView';
 
 function TournamentDetail({ currentUser }) {
   const { tournamentId } = useParams();
@@ -18,8 +17,9 @@ function TournamentDetail({ currentUser }) {
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
   const [currentMatchForResult, setCurrentMatchForResult] = useState(null);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
-  const [copyMessage, setCopyMessage] = useState('');
-  const [showParticipants, setShowParticipants] = useState(true);
+
+
+  const [selectedMatchday, setSelectedMatchday] = useState(1);
 
   const fetchTournamentData = useCallback(async () => {
     if (!tournamentId) return;
@@ -47,40 +47,7 @@ function TournamentDetail({ currentUser }) {
     fetchTournamentData();
   }, [fetchTournamentData]);
 
-  const handleInvite = () => {
-    const tournamentLink = window.location.href;
-    if (navigator.share) {
-      navigator.share({
-        title: `Join my tournament: ${tournament.name}`,
-        text: `Join my tournament '${tournament.name}' on Match Point!`,
-        url: tournamentLink,
-      })
-        .then(() => console.log('Successful share'))
-        .catch((error) => console.log('Error sharing', error));
-    } else if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(tournamentLink)
-        .then(() => {
-          setCopyMessage('Link copied to clipboard!');
-          setTimeout(() => setCopyMessage(''), 3000);
-        })
-        .catch(err => {
-          console.error('Failed to copy: ', err);
-        });
-    } else {
-      const textArea = document.createElement('textarea');
-      textArea.value = tournamentLink;
-      document.body.appendChild(textArea);
-      textArea.select();
-      try {
-        document.execCommand('copy');
-        setCopyMessage('Link copied to clipboard!');
-        setTimeout(() => setCopyMessage(''), 3000);
-      } catch (err) {
-        console.error('Fallback copy failed: ', err);
-      }
-      document.body.removeChild(textArea);
-    }
-  };
+
 
   const handleRemoveParticipant = async (tournamentId, participantId) => {
     setConfirmModal({
@@ -150,126 +117,81 @@ function TournamentDetail({ currentUser }) {
   }
 
   const isOwner = currentUser && tournament && tournament.user_id === currentUser.id;
-  const canManageParticipants = tournament.registration_open;
-  const canGenerateMatches = participants.length >= 2;
+  const canGenerateMatches = participants.length >= 2 && participants.length >= tournament.playoff_participants;
 
 
 
   const Section = ({ title, children }) => (
-    <div className="bg-card-background p-3 rounded-lg shadow-md mb-4">
-      <h3 className="text-lg font-bold text-primary-text mb-2">{title}</h3>
+    <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200 mb-3">
+      <h3 className="text-base font-bold text-primary-text mb-2">{title}</h3>
       {children}
     </div>
   );
 
   return (
-    <div className="p-3">
-      <div className="bg-card-background p-3 rounded-lg shadow-md mb-4">
-        <h2 className="text-2xl font-bold text-primary-text mb-1">{tournament.name}</h2>
-        <p className="text-xs text-secondary-text mb-2">Owned by {isOwner ? 'you' : 'another user'}</p>
-        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-          <div><strong>Type:</strong> <span className="text-secondary-text capitalize">{tournament.tournament_type}</span></div>
-          <div><strong>Format:</strong> <span className="text-secondary-text capitalize">{tournament.format.replace('_', ' ')}</span></div>
-          {tournament.start_date && <div><strong>Date:</strong> <span className="text-secondary-text">{new Date(tournament.start_date).toLocaleDateString()}</span></div>}
-        </div>
-      </div>
+    <div className="p-3 pb-16">
 
-      <Section title={`Participants (${participants.length})`}>
-        <div className="flex justify-between items-center mb-2">
-          <button
-            onClick={() => setShowParticipants(!showParticipants)}
-            className="text-sm text-primary hover:text-primary-hover flex items-center gap-1"
-          >
-            <svg className={`w-4 h-4 transition-transform ${showParticipants ? 'rotate-90' : ''}`} fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-            </svg>
-            {showParticipants ? 'Hide' : 'Show'}
-          </button>
-          {isOwner && canManageParticipants && (
-            <button onClick={handleInvite} className="bg-primary text-white py-2 px-4 rounded hover:bg-primary-hover transition-colors">
-              Invite
-            </button>
-          )}
-        </div>
-        {copyMessage && <p className="text-xs text-green-600 mb-2 text-center">{copyMessage}</p>}
-        {showParticipants && (
-          <div className="space-y-1">
-            {participants.length === 0 ? (
-              <p className="text-xs text-secondary-text py-2 text-center">No participants yet.</p>
-            ) : (
-              participants.map((participant) => (
-                <div key={participant.id} className="flex justify-between items-center bg-white p-2 rounded border border-accent">
-                  <div className="flex-grow">
-                    <span className="font-medium text-primary-text text-sm">{participant.name}</span>
-                    <span className="text-xs text-secondary-text ml-1">({participant.email})</span>
-                    {participant.ranking !== null && participant.ranking !== undefined && (
-                      <span className="text-xs bg-primary text-white px-1 py-0.5 rounded ml-1 font-medium">
-                        #{participant.ranking}
-                      </span>
-                    )}
-                  </div>
-                  {isOwner && (
-                    <button
-                      onClick={() => handleRemoveParticipant(tournament.id, participant.id)}
-                      className="px-2 py-1 text-xs font-semibold bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
-                      title="Remove participant"
-                    >
-                      ×
-                    </button>
-                  )}
-                </div>
-              ))
-            )}
+      {tournament.format === 'round_robin' && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-3">
+          <div className="flex items-center justify-between p-3 border-b border-gray-100">
+            <h3 className="text-base font-bold text-primary-text">Group Stage</h3>
+            <div className="flex items-center gap-2">
+              {tournament.status !== 'open' && (
+                <>
+                  <span className="text-[10px] text-secondary-text font-semibold">DAY</span>
+                  <select
+                    value={selectedMatchday}
+                    onChange={(e) => setSelectedMatchday(parseInt(e.target.value))}
+                    className="w-14 px-2 py-1 text-sm font-semibold border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-white"
+                  >
+                    {Array.from({ length: tournament.total_matchdays || 1 }, (_, i) => (
+                      <option key={i + 1} value={i + 1}>
+                        {i + 1}
+                      </option>
+                    ))}
+                  </select>
+                </>
+              )}
+              {isOwner && canGenerateMatches && (
+                <button onClick={handleGenerateMatches} className="px-3 py-1.5 text-xs font-semibold text-primary border border-primary rounded-lg hover:bg-primary hover:text-white transition-colors">
+                  {matches.length > 0 ? 'Regenerate' : 'Generate'}
+                </button>
+              )}
+            </div>
           </div>
-        )}
-      </Section>
-
-      {tournament.format === 'round_robin' && tournament.status !== 'open' && (
-        <Section title="Leaderboard">
-          <Leaderboard participants={participants} matches={matches} />
-        </Section>
-      )}
-
-      <Section title={tournament.format === 'elimination' ? 'Bracket' : 'Matches'}>
-        {isOwner && (
-          <div className="mb-4">
-            {canGenerateMatches ? (
-              <button onClick={handleGenerateMatches} className="w-full bg-primary text-white py-1 px-3 rounded text-sm hover:bg-primary-hover transition-colors">
-                {matches.length > 0 ? 'Regenerate Matches' : 'Generate Matches'}
-              </button>
-            ) : (
-              <p className="text-sm text-secondary-text italic">
-                At least 2 participants are needed to generate matches.
+          {!canGenerateMatches && tournament.status === 'open' && isOwner && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 m-3">
+              <p className="text-xs text-blue-800">
+                ℹ️ Add at least 2 participants to generate matches.
               </p>
-            )}
-          </div>
-        )}
-        {tournament.format === 'elimination' ? (
-          <>
-            <Bracket matches={matches} participants={participants} />
-            <div className="mt-8">
-              <h4 className="text-lg font-semibold text-primary-text mb-4">Matches</h4>
-              <MatchList 
-                matches={matches} 
-                participants={participants} 
-                onRecordResult={(tId, mId) => openRecordResultModal(mId)} 
-                tournamentId={tournament.id} 
-                tournamentFormat={tournament.format} 
-                currentUser={currentUser} 
+            </div>
+          )}
+          {tournament.status !== 'open' && (
+            <div className="p-3">
+              <MatchdayView 
+                tournament={tournament} 
+                onMatchUpdate={fetchTournamentData}
+                currentUser={currentUser}
+                onRecordResult={(tId, mId) => openRecordResultModal(mId)}
+                selectedMatchday={selectedMatchday}
               />
             </div>
-          </>
-        ) : (
-          <MatchList 
-            matches={matches} 
-            participants={participants} 
-            onRecordResult={(tId, mId) => openRecordResultModal(mId)} 
-            tournamentId={tournament.id} 
-            tournamentFormat={tournament.format} 
-            currentUser={currentUser} 
-          />
-        )}
-      </Section>
+          )}
+        </div>
+      )}
+
+      {tournament.status === 'playoffs' && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-3">
+          <div className="p-3 border-b border-gray-100">
+            <h3 className="text-base font-bold text-primary-text">Playoff Bracket</h3>
+          </div>
+          <div className="p-3">
+            <Bracket matches={matches.filter(m => m.phase === 'playoff')} participants={participants} tournament={tournament} />
+          </div>
+        </div>
+      )}
+
+
 
       {tournament.status === 'completed' && (
         <Section title="Final Results">

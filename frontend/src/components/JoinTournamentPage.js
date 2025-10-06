@@ -62,18 +62,18 @@ function JoinTournamentPage({ currentUser, globalSetError, globalSetIsLoading, g
   }, [tournament, currentUser, inviteCode, onLoginRequired, globalSetError, navigate]);
 
   if (globalIsLoading && !tournament) {
-    return <div className="text-center p-10"><p className="text-lg text-indigo-600 dark:text-indigo-400">Loading tournament information...</p></div>;
+    return <div className="p-6 text-center text-secondary-text text-sm">Loading tournament information...</div>;
   }
 
   if (!tournament) {
     return (
-      <div className="max-w-md mx-auto mt-8 sm:mt-12">
-        <div className="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 text-center">
-          <h2 className="text-2xl font-bold text-red-600 dark:text-red-400 mb-4">Tournament Not Found</h2>
-          <p className="text-gray-700 dark:text-gray-300 mb-6">
+      <div className="p-3 pb-16">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center">
+          <h2 className="text-lg font-bold text-red-600 mb-2">Tournament Not Found</h2>
+          <p className="text-sm text-secondary-text mb-4">
             The invitation link may be invalid or expired.
           </p>
-          <Link to="/" className="font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300">
+          <Link to="/" className="text-sm font-semibold text-primary hover:text-primary-hover">
             &larr; Back to Homepage
           </Link>
         </div>
@@ -84,49 +84,59 @@ function JoinTournamentPage({ currentUser, globalSetError, globalSetIsLoading, g
   const isCurrentUserParticipant = currentUser && tournament.participants.some(p => p.email === currentUser.email);
 
   return (
-    <div className="max-w-lg mx-auto mt-8 sm:mt-12">
-      <div className="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
-        <div className="text-center">
-          <p className="text-sm font-medium text-indigo-600 dark:text-indigo-400">You're invited to join</p>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mt-1 mb-6">{tournament.name}</h1>
+    <div className="p-3 pb-16">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="p-3 border-b border-gray-100 text-center">
+          <p className="text-xs font-semibold text-primary mb-1">You're invited to join</p>
+          <h1 className="text-lg font-bold text-primary-text">{tournament.name}</h1>
         </div>
 
-        <div className="space-y-3 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700/50 mb-6">
-          <p><strong className="font-semibold text-gray-700 dark:text-gray-300">Type:</strong> <span className="text-gray-800 dark:text-gray-200 capitalize">{tournament.tournament_type}</span></p>
-          <p><strong className="font-semibold text-gray-700 dark:text-gray-300">Format:</strong> <span className="text-gray-800 dark:text-gray-200 capitalize">{tournament.format.replace('_', ' ')}</span></p>
-          {tournament.start_date && <p><strong className="font-semibold text-gray-700 dark:text-gray-300">Date:</strong> <span className="text-gray-800 dark:text-gray-200">{new Date(tournament.start_date).toLocaleDateString()}</span></p>}
-          <p className="flex items-center"><strong className="font-semibold text-gray-700 dark:text-gray-300">Registration:</strong>
-            <span className={`ml-2 px-2 py-0.5 text-xs font-semibold rounded-full ${tournament.registration_open ? 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300'}`}>
+        <div className="p-3 space-y-2">
+          <div className="flex justify-between items-center">
+            <span className="text-sm font-semibold text-secondary-text">Type</span>
+            <span className="text-sm text-primary-text capitalize">{tournament.tournament_type}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-sm font-semibold text-secondary-text">Format</span>
+            <span className="text-sm text-primary-text capitalize">{tournament.format.replace('_', ' ')}</span>
+          </div>
+          {tournament.start_date && (
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-semibold text-secondary-text">Date</span>
+              <span className="text-sm text-primary-text">{new Date(tournament.start_date).toLocaleDateString()}</span>
+            </div>
+          )}
+          <div className="flex justify-between items-center">
+            <span className="text-sm font-semibold text-secondary-text">Registration</span>
+            <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${tournament.registration_open ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
               {tournament.registration_open ? 'Open' : 'Closed'}
             </span>
-          </p>
+          </div>
         </div>
 
         {joinMessage && (
-          <p className={`mb-6 p-3 rounded-lg text-center text-sm font-medium ${joinMessage.includes("Successfully") ? 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300'}`}>
-            {joinMessage}
-          </p>
+          <div className="p-3 border-t border-gray-100">
+            <p className={`p-2 rounded-lg text-center text-xs font-semibold ${joinMessage.includes("Successfully") ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-yellow-50 text-yellow-700 border border-yellow-200'}`}>
+              {joinMessage}
+            </p>
+          </div>
         )}
 
-        {isCurrentUserParticipant ? (
-          <div className="text-center">
-            <p className="p-3 rounded-lg bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 text-sm">You are already part of this tournament.</p>
-            <Link to={`/tournaments/${tournament.id}`} className="mt-4 inline-block font-semibold text-indigo-600 hover:underline dark:text-indigo-400">View Tournament</Link>
-          </div>
-        ) : tournament.registration_open ? (
-          <button
-            onClick={handleJoinTournament}
-            disabled={isJoining || globalIsLoading}
-            className="w-full px-6 py-3 text-base font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-300 dark:focus:ring-green-800 disabled:bg-gray-400 dark:disabled:bg-gray-600 transition-all"
-          >
-            {isJoining ? 'Processing...' : (currentUser ? 'Confirm & Join' : 'Login to Join')}
-          </button>
-        ) : null}
-
-        <div className="mt-8 text-center">
-          <Link to="/" className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:underline">
-            &larr; Back to safety
-          </Link>
+        <div className="p-3 border-t border-gray-100">
+          {isCurrentUserParticipant ? (
+            <div className="space-y-2">
+              <p className="p-2 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 text-xs text-center font-semibold">You are already part of this tournament.</p>
+              <Link to={`/tournaments/${tournament.id}`} className="block w-full px-4 py-2 text-sm font-semibold text-white bg-primary rounded-lg hover:bg-primary-hover transition-colors text-center shadow-sm">View Tournament</Link>
+            </div>
+          ) : tournament.registration_open ? (
+            <button
+              onClick={handleJoinTournament}
+              disabled={isJoining || globalIsLoading}
+              className="w-full px-4 py-2 text-sm font-semibold text-white bg-primary rounded-lg hover:bg-primary-hover disabled:bg-gray-400 transition-colors shadow-sm"
+            >
+              {isJoining ? 'Processing...' : (currentUser ? 'Confirm & Join' : 'Login to Join')}
+            </button>
+          ) : null}
         </div>
       </div>
     </div>

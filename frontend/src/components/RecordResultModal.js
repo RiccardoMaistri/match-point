@@ -97,44 +97,44 @@ function RecordResultModal({ isOpen, onClose, match, participants, onSubmitResul
   const labelClasses = "block text-sm font-medium text-primary-text";
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-50 flex justify-center items-center p-4">
-      <div className="relative bg-background w-full max-w-lg p-6 sm:p-8 rounded-xl shadow-2xl border border-accent">
-        <div className="flex justify-between items-start mb-4">
-          <h3 className="text-2xl font-bold text-primary-text">Record Result</h3>
+    <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-50 flex justify-center items-center p-3">
+      <div className="relative bg-white w-full max-w-lg p-4 rounded-xl shadow-2xl border border-gray-200">
+        <div className="flex justify-between items-start mb-3">
+          <h3 className="text-lg font-bold text-primary-text">Record Result</h3>
           <button onClick={onClose} className="p-1 text-secondary-text hover:text-primary-text transition-colors rounded-full">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
           </button>
         </div>
 
-        <div className="text-sm text-secondary-text mb-4">
+        <div className="text-xs text-secondary-text mb-3">
           <p>Match: <span className="font-semibold text-primary-text">{participant1.name}</span> vs <span className="font-semibold text-primary-text">{participant2.name}</span></p>
-          {match.round_number && <p className="text-xs">Round: {match.round_number} | Match: {match.match_number}</p>}
+          {match.round_number && <p className="text-[10px] mt-0.5">Round: {match.round_number} | Match: {match.match_number}</p>}
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {error && <p className="text-sm text-red-700 bg-red-100 p-3 rounded-lg border border-red-200">{error}</p>}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && <p className="text-xs text-red-700 bg-red-100 p-2 rounded-lg border border-red-200">{error}</p>}
 
-          <div className="space-y-4">
-            <h4 className="text-md font-semibold text-primary-text pt-2">Set 1</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-3">
+            <h4 className="text-sm font-bold text-primary-text">Set 1</h4>
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label htmlFor="score1_set1" className={labelClasses}>Score ({participant1.name})</label>
-                <input type="number" name="score1_set1" id="score1_set1" value={scores.score1_set1} onChange={handleScoreChange} min="0" className={inputClasses} placeholder="e.g., 6" />
+                <label htmlFor="score1_set1" className={labelClasses}>{participant1.name}</label>
+                <input type="number" name="score1_set1" id="score1_set1" value={scores.score1_set1} onChange={handleScoreChange} min="0" className={inputClasses} placeholder="0" />
               </div>
               <div>
-                <label htmlFor="score2_set1" className={labelClasses}>Score ({participant2.name})</label>
-                <input type="number" name="score2_set1" id="score2_set1" value={scores.score2_set1} onChange={handleScoreChange} min="0" className={inputClasses} placeholder="e.g., 4" />
+                <label htmlFor="score2_set1" className={labelClasses}>{participant2.name}</label>
+                <input type="number" name="score2_set1" id="score2_set1" value={scores.score2_set1} onChange={handleScoreChange} min="0" className={inputClasses} placeholder="0" />
               </div>
             </div>
-            <h4 className="text-md font-semibold text-primary-text pt-2">Set 2</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <h4 className="text-sm font-bold text-primary-text">Set 2</h4>
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label htmlFor="score1_set2" className={labelClasses}>Score ({participant1.name})</label>
-                <input type="number" name="score1_set2" id="score1_set2" value={scores.score1_set2} onChange={handleScoreChange} min="0" className={inputClasses} placeholder="e.g., 6" />
+                <label htmlFor="score1_set2" className={labelClasses}>{participant1.name}</label>
+                <input type="number" name="score1_set2" id="score1_set2" value={scores.score1_set2} onChange={handleScoreChange} min="0" className={inputClasses} placeholder="0" />
               </div>
               <div>
-                <label htmlFor="score2_set2" className={labelClasses}>Score ({participant2.name})</label>
-                <input type="number" name="score2_set2" id="score2_set2" value={scores.score2_set2} onChange={handleScoreChange} min="0" className={inputClasses} placeholder="e.g., 4" />
+                <label htmlFor="score2_set2" className={labelClasses}>{participant2.name}</label>
+                <input type="number" name="score2_set2" id="score2_set2" value={scores.score2_set2} onChange={handleScoreChange} min="0" className={inputClasses} placeholder="0" />
               </div>
             </div>
           </div>
@@ -142,18 +142,18 @@ function RecordResultModal({ isOpen, onClose, match, participants, onSubmitResul
           <div>
             <label htmlFor="winnerId" className={labelClasses}>Winner</label>
             <select name="winnerId" id="winnerId" value={winnerId} onChange={(e) => setWinnerId(e.target.value)} className={inputClasses}>
-              <option value="">-- Auto-detect or select if tied --</option>
+              <option value="">Auto-detect</option>
               <option value={participant1.id}>{participant1.name}</option>
               <option value={participant2.id}>{participant2.name}</option>
             </select>
-            <p className="text-xs text-secondary-text mt-1.5">Select a winner to override auto-detection based on scores.</p>
+            <p className="text-[10px] text-secondary-text mt-1">Override auto-detection if needed</p>
           </div>
 
-          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-4">
-            <button type="button" onClick={onClose} className="px-6 py-2 text-sm font-semibold text-secondary-text bg-accent rounded-lg hover:bg-gray-300 transition-colors">
+          <div className="flex gap-2 pt-2">
+            <button type="button" onClick={onClose} className="flex-1 px-4 py-2 text-sm font-semibold text-secondary-text bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
               Cancel
             </button>
-            <button type="submit" className="px-6 py-2 text-sm font-semibold text-white bg-primary rounded-lg hover:bg-primary-hover shadow-sm transition-colors">
+            <button type="submit" className="flex-1 px-4 py-2 text-sm font-semibold text-white bg-primary rounded-lg hover:bg-primary-hover shadow-sm transition-colors">
               Save Result
             </button>
           </div>

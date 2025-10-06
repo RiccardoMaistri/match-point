@@ -15,6 +15,9 @@ class Match(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     round_number: Optional[int] = None
     match_number: Optional[int] = None
+    match_day: Optional[int] = None  # For round robin scheduling
+    phase: Literal['group', 'playoff'] = 'group'  # Tournament phase
+    scheduled_date: Optional[datetime] = None  # Scheduled match time
     participant1_id: Optional[str] = None
     participant2_id: Optional[str] = None
     winner_id: Optional[str] = None
@@ -25,7 +28,7 @@ class Match(BaseModel):
     set2_score_participant1: Optional[int] = None
     set2_score_participant2: Optional[int] = None
     winner_partecipant: Optional[int] = None
-    is_bye: bool = False  # Per i bye nei bracket a eliminazione diretta
+    is_bye: bool = False
     status: Literal['pending', 'in_progress', 'completed', 'cancelled'] = 'pending'
 
 
@@ -56,11 +59,13 @@ class UserCreate(BaseModel):
 class TournamentCreate(BaseModel):
     name: str
     tournament_type: Literal['single', 'double']
-    format: Literal['elimination', 'round_robin']
+    format: Literal['round_robin'] = 'round_robin'  # Only round_robin supported for new tournaments
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
     registration_open: bool = True
     invitation_link: Optional[str] = None
+    match_frequency_days: int = 7  # Days between matchdays
+    playoff_participants: int = 4  # Number advancing to playoffs
 
     class Config:
         from_attributes = True
@@ -68,19 +73,22 @@ class TournamentCreate(BaseModel):
 
 class Tournament(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    user_id: str  # Foreign key to User model
+    user_id: str
     name: str
-    tournament_type: Literal['single', 'double']  # singolo o doppio
-    format: Literal['elimination', 'round_robin']  # eliminazione diretta o girone all'italiana
+    tournament_type: Literal['single', 'double']
+    format: Literal['elimination', 'round_robin'] = 'round_robin'  # Backward compatible, but only round_robin for new
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
     due_date: Optional[datetime] = None
     participants: List[Participant] = []
     matches: List[Match] = []
     registration_open: bool = True
-    status: Literal['open', 'in_progress', 'completed'] = 'open'
-    invitation_link: Optional[str] = None  # Link univoco per l'iscrizione
+    status: Literal['open', 'in_progress', 'playoffs', 'completed'] = 'open'
+    invitation_link: Optional[str] = None
+    match_frequency_days: int = 7  # Days between matchdays
+    playoff_participants: int = 4  # Number advancing to playoffs
+    current_matchday: int = 1
+    total_matchdays: Optional[int] = None
 
     class Config:
-        # Per permettere a FastAPI di gestire i tipi datetime
         from_attributes = True

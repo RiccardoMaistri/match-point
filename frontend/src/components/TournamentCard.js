@@ -45,7 +45,9 @@ const TournamentCard = ({ tournament, onView }) => {
       </div>
       <div className="p-4">
         <h3 className="text-primary-text text-lg font-bold leading-tight mb-1">{name}</h3>
-        <p className="text-secondary-text text-sm font-normal leading-normal mb-1 capitalize">{format}</p>
+        <p className="text-secondary-text text-sm font-normal leading-normal mb-1">
+          {format === 'round_robin' ? 'Round Robin + Playoffs' : format}
+        </p>
         {status !== 'completed' && (
           <>
             <div className="w-full bg-accent rounded-full h-2.5 mb-3">

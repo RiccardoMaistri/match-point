@@ -8,14 +8,14 @@ module.exports = {
     extend: {
       colors: {
         primary: {
-          DEFAULT: '#0c7ff2',
-          hover: '#0a68c4',
+          DEFAULT: '#2563eb',
+          hover: '#1d4ed8',
         },
-        'primary-text': '#111418',
-        'secondary-text': '#60758a',
-        background: '#ffffff',
-        'card-background': '#f8f9fa',
-        accent: '#e9ecef',
+        'primary-text': '#1e293b',
+        'secondary-text': '#64748b',
+        background: '#f8fafc',
+        'card-background': '#ffffff',
+        accent: '#e2e8f0',
       },
       fontFamily: {
         sans: ['Manrope', 'Noto Sans', 'sans-serif'],
