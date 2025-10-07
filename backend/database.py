@@ -501,6 +501,12 @@ def create_dummy_data():
 # And run `python backend/database.py` directly.
 # For now, it will be called if initialize_database_files finds an empty tournaments.json.
 
+def clear_all_data():
+    """Clears all data from tournaments and users files. Used for testing."""
+    _ensure_data_dir_exists()
+    _save_data(TOURNAMENTS_FILE, [])
+    _save_data(USERS_FILE, [])
+
 def initialize_database_files_with_dummies():
     _ensure_data_dir_exists()
     if not os.path.exists(USERS_FILE): # Ensure users file exists
