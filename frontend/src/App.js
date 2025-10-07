@@ -12,6 +12,7 @@ import BottomNav from './components/BottomNav';
 import Standings from './components/Standings';
 import Participants from './components/Participants';
 import ConfirmModal from './components/ConfirmModal';
+import InstallPrompt from './components/InstallPrompt';
 import * as api from './services/api';
 
 function App() {
@@ -335,6 +336,7 @@ function App() {
         </main>
       </div>
       {currentUser && <BottomNav />}
+      <InstallPrompt />
       <ConfirmModal
         isOpen={confirmModal.isOpen}
         title={confirmModal.title}
