@@ -9,3 +9,5 @@ email-validator
 filelock
 pytest
 requests
+SQLAlchemy
+psycopg2-binary
