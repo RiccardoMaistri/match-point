@@ -210,9 +210,12 @@ def get_user_by_email_db(email: str) -> Optional[Dict[str, Any]]:
     """
     Recupera un utente per email dal 'database' (users.json).
     """
+    if not email:
+        return None
     users = _load_users()
+    email_lower = email.lower()
     for user in users:
-        if user.get("email") == email:
+        if user.get("email") and user.get("email").lower() == email_lower:
             return user
     return None
 
@@ -234,6 +237,7 @@ def create_user_db(user_data: Dict[str, Any]) -> Dict[str, Any]:
     Assumes user_data is a dict representation of the User model.
     """
     users = _load_users()
+    user_data["email"] = user_data["email"].lower()
     # The caller (e.g., registration endpoint in main.py) should ensure email uniqueness before calling this.
     # However, a check here can be a safeguard.
     existing_user = get_user_by_email_db(user_data.get("email"))
@@ -268,6 +272,8 @@ def update_user_db(user_id: str, user_update_data: Dict[str, Any]) -> Optional[D
             original_id = user["id"]
             users[i].update(user_update_data)
             users[i]["id"] = original_id  # Preserve original ID
+            if 'email' in users[i]:
+                users[i]['email'] = users[i]['email'].lower()
             updated_user = users[i]
             user_found = True
             break
@@ -289,8 +295,6 @@ if not os.path.exists(USERS_FILE):
 # Import models for type hinting and instantiation if needed directly
 from models import Tournament as TournamentModel, Participant as ParticipantModel, Match as MatchModel
 from datetime import datetime, timezone
-
-FRONTEND_BASE_URL_FOR_DUMMY_DATA = "http://localhost:3000" # Duplicated for direct use here if main.py not imported
 
 def _generate_elimination_bracket(participants: List[ParticipantModel]) -> List[MatchModel]:
     """Generates a full elimination bracket, including future rounds with placeholders."""
@@ -419,7 +423,7 @@ def create_dummy_data():
         participants=[p.model_dump() for p in participants_t1],
         matches=_generate_dummy_matches(participants_t1, "elimination"),
         registration_open=True,
-        invitation_link=f"{FRONTEND_BASE_URL_FOR_DUMMY_DATA}/join/{str(uuid.uuid4())}"
+        invitation_link=f"/join/{str(uuid.uuid4())}"
     )
     dummy_tournaments_data.append(tournament1.model_dump())
 
@@ -440,7 +444,7 @@ def create_dummy_data():
         participants=[p.model_dump() for p in participants_t2],
         matches=_generate_dummy_matches(participants_t2, "round_robin"),
         registration_open=False, # Example of a closed tournament
-        invitation_link=f"{FRONTEND_BASE_URL_FOR_DUMMY_DATA}/join/{str(uuid.uuid4())}"
+        invitation_link=f"/join/{str(uuid.uuid4())}"
     )
     dummy_tournaments_data.append(tournament2.model_dump())
 
@@ -463,7 +467,7 @@ def create_dummy_data():
         participants=[p.model_dump() for p in pt3_players],
         matches=_generate_dummy_matches(pt3_players, "elimination"),
         registration_open=True,
-        invitation_link=f"{FRONTEND_BASE_URL_FOR_DUMMY_DATA}/join/{str(uuid.uuid4())}"
+        invitation_link=f"/join/{str(uuid.uuid4())}"
     )
     dummy_tournaments_data.append(tournament3.model_dump())
 
@@ -486,7 +490,7 @@ def create_dummy_data():
         participants=[p.model_dump() for p in dummy_players],
         matches=_generate_dummy_matches(dummy_players, "elimination"),
         registration_open=True,
-        invitation_link=f"{FRONTEND_BASE_URL_FOR_DUMMY_DATA}/join/{str(uuid.uuid4())}"
+        invitation_link=f"/join/{str(uuid.uuid4())}"
     )
     dummy_tournaments_data.append(tournament4.model_dump())
 

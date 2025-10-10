@@ -119,22 +119,22 @@ function RecordResultModal({ isOpen, onClose, match, participants, onSubmitResul
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label htmlFor="score1_set1" className={labelClasses}>{participant1.name}</label>
-                <input type="number" name="score1_set1" id="score1_set1" value={scores.score1_set1} onChange={handleScoreChange} min="0" className={inputClasses} placeholder="0" />
+                <input type="number" inputMode="numeric" name="score1_set1" id="score1_set1" value={scores.score1_set1} onChange={handleScoreChange} min="0" className={inputClasses} placeholder="0" />
               </div>
               <div>
                 <label htmlFor="score2_set1" className={labelClasses}>{participant2.name}</label>
-                <input type="number" name="score2_set1" id="score2_set1" value={scores.score2_set1} onChange={handleScoreChange} min="0" className={inputClasses} placeholder="0" />
+                <input type="number" inputMode="numeric" name="score2_set1" id="score2_set1" value={scores.score2_set1} onChange={handleScoreChange} min="0" className={inputClasses} placeholder="0" />
               </div>
             </div>
             <h4 className="text-sm font-bold text-primary-text">Set 2</h4>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label htmlFor="score1_set2" className={labelClasses}>{participant1.name}</label>
-                <input type="number" name="score1_set2" id="score1_set2" value={scores.score1_set2} onChange={handleScoreChange} min="0" className={inputClasses} placeholder="0" />
+                <input type="number" inputMode="numeric" name="score1_set2" id="score1_set2" value={scores.score1_set2} onChange={handleScoreChange} min="0" className={inputClasses} placeholder="0" />
               </div>
               <div>
                 <label htmlFor="score2_set2" className={labelClasses}>{participant2.name}</label>
-                <input type="number" name="score2_set2" id="score2_set2" value={scores.score2_set2} onChange={handleScoreChange} min="0" className={inputClasses} placeholder="0" />
+                <input type="number" inputMode="numeric" name="score2_set2" id="score2_set2" value={scores.score2_set2} onChange={handleScoreChange} min="0" className={inputClasses} placeholder="0" />
               </div>
             </div>
           </div>

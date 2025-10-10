@@ -171,6 +171,8 @@ function TournamentDetail({ currentUser }) {
               <MatchdayView 
                 tournament={tournament} 
                 onMatchUpdate={fetchTournamentData}
+                matches={matches}
+                participants={participants}
                 currentUser={currentUser}
                 onRecordResult={(tId, mId) => openRecordResultModal(mId)}
                 selectedMatchday={selectedMatchday}

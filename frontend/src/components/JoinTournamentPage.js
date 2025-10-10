@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import * as api from '../services/api';
 
 function JoinTournamentPage({ currentUser, globalSetError, globalSetIsLoading, globalIsLoading, onLoginRequired }) {
-  const { inviteCode } = useParams(); // Re-introduced useParams to get inviteCode from URL
+  const { inviteCode } = useParams();
   const navigate = useNavigate();
   const [tournament, setTournament] = useState(null);
   const [joinMessage, setJoinMessage] = useState('');
@@ -17,7 +17,7 @@ function JoinTournamentPage({ currentUser, globalSetError, globalSetIsLoading, g
     try {
       const data = await api.getTournamentByInviteCode(inviteCode);
       setTournament(data);
-      if (!data.registration_open) {
+      if (data.status !== 'open') {
         setJoinMessage("Registration for this tournament is currently closed.");
       }
     } catch (err) {
@@ -82,6 +82,7 @@ function JoinTournamentPage({ currentUser, globalSetError, globalSetIsLoading, g
   }
 
   const isCurrentUserParticipant = currentUser && tournament.participants.some(p => p.email === currentUser.email);
+  const registrationIsOpen = tournament.status === 'open';
 
   return (
     <div className="p-3 pb-16">
@@ -108,8 +109,8 @@ function JoinTournamentPage({ currentUser, globalSetError, globalSetIsLoading, g
           )}
           <div className="flex justify-between items-center">
             <span className="text-sm font-semibold text-secondary-text">Registration</span>
-            <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${tournament.registration_open ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
-              {tournament.registration_open ? 'Open' : 'Closed'}
+            <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${registrationIsOpen ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+              {registrationIsOpen ? 'Open' : 'Closed'}
             </span>
           </div>
         </div>
@@ -128,7 +129,7 @@ function JoinTournamentPage({ currentUser, globalSetError, globalSetIsLoading, g
               <p className="p-2 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 text-xs text-center font-semibold">You are already part of this tournament.</p>
               <Link to={`/tournaments/${tournament.id}`} className="block w-full px-4 py-2 text-sm font-semibold text-white bg-primary rounded-lg hover:bg-primary-hover transition-colors text-center shadow-sm">View Tournament</Link>
             </div>
-          ) : tournament.registration_open ? (
+          ) : registrationIsOpen ? (
             <button
               onClick={handleJoinTournament}
               disabled={isJoining || globalIsLoading}
