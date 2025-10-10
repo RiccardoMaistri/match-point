@@ -8,7 +8,8 @@ const Layout = ({
   showBackButton = false, 
   actionIcon = null, 
   onActionClick = null,
-  hideBottomNav = false
+  hideBottomNav = false,
+  currentUser
 }) => {
   return (
     <div className="relative flex min-h-screen flex-col bg-gray-900 justify-between overflow-x-hidden">
@@ -18,6 +19,7 @@ const Layout = ({
           showBackButton={showBackButton} 
           actionIcon={actionIcon} 
           onActionClick={onActionClick} 
+          currentUser={currentUser}
         />
         <div className="flex-grow">
           {children}

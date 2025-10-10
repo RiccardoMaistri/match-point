@@ -188,7 +188,13 @@ function TournamentDetail({ currentUser }) {
             <h3 className="text-base font-bold text-primary-text">Playoff Bracket</h3>
           </div>
           <div className="p-3">
-            <Bracket matches={matches.filter(m => m.phase === 'playoff')} participants={participants} tournament={tournament} />
+            <Bracket 
+              matches={matches.filter(m => m.phase === 'playoff')} 
+              participants={participants} 
+              tournament={tournament} 
+              currentUser={currentUser}
+              onRecordResult={(tId, mId) => openRecordResultModal(mId)}
+            />
           </div>
         </div>
       )}

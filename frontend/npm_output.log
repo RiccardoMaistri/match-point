@@ -1,0 +1,16 @@
+npm warn deprecated start@5.1.0: Deprecated in favor of https://github.com/deepsweet/start
+
+added 3 packages, removed 1 package, changed 2 packages, and audited 1386 packages in 4s
+
+278 packages are looking for funding
+  run `npm fund` for details
+
+12 vulnerabilities (2 low, 3 moderate, 6 high, 1 critical)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.

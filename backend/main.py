@@ -56,6 +56,7 @@ from fastapi.middleware.cors import CORSMiddleware
 # Define allowed origins
 origins = [
     "http://localhost:3000",
+    "http://192.168.1.37:3000",
     # You can add other origins here, e.g., your production frontend URL
 ]
 
@@ -439,6 +440,75 @@ async def get_tournament_matches(
     return tournament.matches
 
 
+def _calculate_standings(tournament: Tournament) -> list:
+    standings = {}
+    for p in tournament.participants:
+        standings[p.id] = {
+            "participant": p,
+            "played": 0,
+            "wins": 0,
+            "losses": 0,
+            "score_for": 0,
+            "score_against": 0,
+        }
+    
+    for match in tournament.matches:
+        if match.phase == 'group' and match.status == 'completed':
+            p1_id = match.participant1_id
+            p2_id = match.participant2_id
+
+            if p1_id in standings:
+                standings[p1_id]["played"] += 1
+                if match.score_participant1 is not None:
+                    standings[p1_id]["score_for"] += match.score_participant1
+                if match.score_participant2 is not None:
+                    standings[p1_id]["score_against"] += match.score_participant2
+            
+            if p2_id in standings:
+                standings[p2_id]["played"] += 1
+                if match.score_participant2 is not None:
+                    standings[p2_id]["score_for"] += match.score_participant2
+                if match.score_participant1 is not None:
+                    standings[p2_id]["score_against"] += match.score_participant1
+            
+            if match.winner_id:
+                if match.winner_id in standings:
+                    standings[match.winner_id]["wins"] += 1
+                
+                loser_id = p2_id if match.winner_id == p1_id else p1_id
+                if loser_id in standings:
+                    standings[loser_id]["losses"] += 1
+    
+    sorted_standings = sorted(
+        standings.values(),
+        key=lambda x: x["wins"],
+        reverse=True
+    )
+    return sorted_standings
+
+
+def _generate_playoffs_from_standings(tournament_obj: Tournament):
+    standings = _calculate_standings(tournament_obj)
+    qualifiers = standings[:tournament_obj.playoff_participants]
+    if len(qualifiers) >= tournament_obj.playoff_participants:
+        playoff_round = 1
+        match_num = len(tournament_obj.matches) + 1
+        for i in range(len(qualifiers) // 2):
+            p1 = qualifiers[i]["participant"]
+            p2 = qualifiers[len(qualifiers) - 1 - i]["participant"]
+            match = Match(
+                participant1_id=p1.id,
+                participant2_id=p2.id,
+                match_number=match_num,
+                round_number=playoff_round,
+                phase='playoff',
+            )
+            tournament_obj.matches.append(match)
+            match_num += 1
+        tournament_obj.status = "playoffs"
+    return tournament_obj
+
+
 @app.post(
     "/tournaments/{tournament_id}/matches/{match_id}/result",
     response_model=Match,
@@ -532,33 +602,10 @@ async def record_match_result(
 
     tournament.matches[match_index] = match_to_update
 
-    # Helper to generate next round of playoffs
-    async def _generate_playoffs_from_standings(tournament_obj: Tournament):
-        standings_response = await get_tournament_standings(tournament_obj.id)
-        standings = standings_response["standings"]
-        qualifiers = standings[:tournament_obj.playoff_participants]
-        if len(qualifiers) >= tournament_obj.playoff_participants:
-            playoff_round = 1
-            match_num = len(tournament_obj.matches) + 1
-            for i in range(len(qualifiers) // 2):
-                p1 = Participant(**qualifiers[i]["participant"])
-                p2 = Participant(**qualifiers[len(qualifiers) - 1 - i]["participant"])
-                match = Match(
-                    participant1_id=p1.id,
-                    participant2_id=p2.id,
-                    match_number=match_num,
-                    round_number=playoff_round,
-                    phase='playoff',
-                )
-                tournament_obj.matches.append(match)
-                match_num += 1
-            tournament_obj.status = "playoffs"
-        return tournament_obj
-
     if tournament.status == 'group_stage':
         group_matches = [m for m in tournament.matches if m.phase == 'group']
         if all(m.status == 'completed' for m in group_matches):
-            tournament = await _generate_playoffs_from_standings(tournament)
+            tournament = _generate_playoffs_from_standings(tournament)
 
 
     if match_to_update.phase == 'playoff' and match_to_update.status == 'completed':
@@ -666,48 +713,7 @@ async def get_tournament_standings(
         )
 
     tournament = Tournament(**tournament_dict)
-    
-    standings = {}
-    for p in tournament.participants:
-        standings[p.id] = {
-            "participant": p,
-            "played": 0,
-            "wins": 0,
-            "losses": 0,
-            "score_for": 0,
-            "score_against": 0,
-        }
-    
-    for match in tournament.matches:
-        if match.phase == 'group' and match.status == 'completed':
-            if match.participant1_id in standings:
-                standings[match.participant1_id]["played"] += 1
-                if match.score_participant1 is not None:
-                    standings[match.participant1_id]["score_for"] += match.score_participant1
-                if match.score_participant2 is not None:
-                    standings[match.participant1_id]["score_against"] += match.score_participant2
-            
-            if match.participant2_id in standings:
-                standings[match.participant2_id]["played"] += 1
-                if match.score_participant2 is not None:
-                    standings[match.participant2_id]["score_for"] += match.score_participant2
-                if match.score_participant1 is not None:
-                    standings[match.participant2_id]["score_against"] += match.score_participant1
-            
-            if match.winner_id:
-                if match.winner_id in standings:
-                    standings[match.winner_id]["wins"] += 1
-                
-                loser_id = match.participant2_id if match.winner_id == match.participant1_id else match.participant1_id
-                if loser_id in standings:
-                    standings[loser_id]["losses"] += 1
-    
-    sorted_standings = sorted(
-        standings.values(),
-        key=lambda x: x["wins"],
-        reverse=True
-    )
-    
+    sorted_standings = _calculate_standings(tournament)
     return {"standings": sorted_standings}
 
 
@@ -746,7 +752,7 @@ async def generate_playoffs(
             detail="All group stage matches must be completed first",
         )
 
-    tournament = await _generate_playoffs_from_standings(tournament)
+    tournament = _generate_playoffs_from_standings(tournament)
     update_tournament_db(tournament_id, tournament.model_dump())
     
     return {

@@ -11,7 +11,6 @@ function RecordResultModal({ isOpen, onClose, match, participants, onSubmitResul
     score1_set2: '',
     score2_set2: '',
   });
-  const [winnerId, setWinnerId] = useState('');
   const [error, setError] = useState('');
 
   const participant1 = match ? getParticipantById(match.participant1_id, participants) : null;
@@ -25,7 +24,6 @@ function RecordResultModal({ isOpen, onClose, match, participants, onSubmitResul
         score1_set2: match.score_participant1_set2 ?? '',
         score2_set2: match.score_participant2_set2 ?? '',
       });
-      setWinnerId(match.winner_id || '');
       setError('');
     } else {
       setScores({
@@ -34,7 +32,6 @@ function RecordResultModal({ isOpen, onClose, match, participants, onSubmitResul
         score1_set2: '',
         score2_set2: '',
       });
-      setWinnerId('');
       setError('');
     }
   }, [match]);
@@ -78,17 +75,12 @@ function RecordResultModal({ isOpen, onClose, match, participants, onSubmitResul
       }
     }
 
-    if (winnerId && winnerId !== match.participant1_id && winnerId !== match.participant2_id) {
-      setError('Selected winner is not part of this match.');
-      return;
-    }
-
     const resultData = {
         score_participant1_set1: parsedScores.score1_set1,
         score_participant2_set1: parsedScores.score2_set1,
         score_participant1_set2: parsedScores.score1_set2,
         score_participant2_set2: parsedScores.score2_set2,
-        winner_id: winnerId || null,
+        winner_id: null,
     };
     onSubmitResult(tournamentId, match.id, resultData);
   };
@@ -137,16 +129,6 @@ function RecordResultModal({ isOpen, onClose, match, participants, onSubmitResul
                 <input type="number" inputMode="numeric" name="score2_set2" id="score2_set2" value={scores.score2_set2} onChange={handleScoreChange} min="0" className={inputClasses} placeholder="0" />
               </div>
             </div>
-          </div>
-
-          <div>
-            <label htmlFor="winnerId" className={labelClasses}>Winner</label>
-            <select name="winnerId" id="winnerId" value={winnerId} onChange={(e) => setWinnerId(e.target.value)} className={inputClasses}>
-              <option value="">Auto-detect</option>
-              <option value={participant1.id}>{participant1.name}</option>
-              <option value={participant2.id}>{participant2.name}</option>
-            </select>
-            <p className="text-[10px] text-secondary-text mt-1">Override auto-detection if needed</p>
           </div>
 
           <div className="flex gap-2 pt-2">
