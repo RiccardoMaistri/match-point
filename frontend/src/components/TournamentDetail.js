@@ -152,9 +152,9 @@ function TournamentDetail({ currentUser }) {
                   </select>
                 </>
               )}
-              {isOwner && canGenerateMatches && (
+              {isOwner && canGenerateMatches && tournament.status === 'open' && (
                 <button onClick={handleGenerateMatches} className="px-3 py-1.5 text-xs font-semibold text-primary border border-primary rounded-lg hover:bg-primary hover:text-white transition-colors">
-                  {matches.length > 0 ? 'Regenerate' : 'Generate'}
+                  {matches.length > 0 ? 'Regenerate' : 'Kick Off'}
                 </button>
               )}
             </div>
