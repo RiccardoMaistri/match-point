@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -10,6 +11,26 @@ from pydantic import BaseModel, EmailStr
 SECRET_KEY = "your-secret-key"  # Replace with a strong, randomly generated key
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
+REVOKED_TOKENS_FILE = "revoked_tokens.json"
+
+
+# --- Token Revocation ---
+
+def load_revoked_tokens():
+    try:
+        with open(REVOKED_TOKENS_FILE, "r") as f:
+            return set(json.load(f))
+    except (FileNotFoundError, json.JSONDecodeError):
+        return set()
+
+def is_token_revoked(token: str):
+    return token in load_revoked_tokens()
+
+def revoke_token(token: str):
+    revoked_tokens = load_revoked_tokens()
+    revoked_tokens.add(token)
+    with open(REVOKED_TOKENS_FILE, "w") as f:
+        json.dump(list(revoked_tokens), f)
 
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -50,6 +71,12 @@ from database import get_user_by_email_db # Import the actual db function
 from models import User # Import User model for type hinting and instantiation
 
 async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
+    if is_token_revoked(token):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has been revoked",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -79,6 +106,8 @@ async def get_current_active_user(current_user: User = Depends(get_current_user)
 
 async def get_optional_current_active_user(token: Optional[str] = Depends(oauth2_scheme_optional)) -> Optional[User]:
     if not token:
+        return None
+    if is_token_revoked(token):
         return None
     try:
         # This reuses the logic from get_current_user and get_current_active_user

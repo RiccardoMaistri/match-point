@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  # Servizio per il backend FastAPI
+  backend:
+    # Costruisce l'immagine usando il Dockerfile che si trova nella cartella ./backend
+    build: ./backend
+    ports:
+      # Mappa la porta 8000 del container alla porta 8000 del tuo computer
+      - "8000:8000"
+    volumes:
+      # Monta il codice sorgente del backend dentro il container.
+      # Questo permette a uvicorn di ricaricare automaticamente il server quando fai modifiche al codice.
+      - ./backend:/app
+    env_file:
+      # Carica le variabili d'ambiente dal file .env nella cartella backend
+      # Qui dovrai mettere la connection string di Supabase per il test
+      - ./backend/.env
+
+  # Servizio per il frontend React
+  frontend:
+    # Usa un'immagine Node.js standard, ideale per lo sviluppo
+    image: node:16-alpine
+    # Imposta la directory di lavoro all'interno del container
+    working_dir: /app
+    volumes:
+      # Monta il codice sorgente del frontend dentro il container
+      # Questo permette al server di sviluppo di React di ricaricarsi quando modifichi il codice.
+      - ./frontend:/app
+    ports:
+      # Mappa la porta 3000 del container alla porta 3000 del tuo computer
+      - "3000:3000"
+    # Comando per installare le dipendenze (se non già presenti in node_modules) e avviare il server di sviluppo
+    command: sh -c "npm install && npm start"
+    environment:
+      # Imposta la variabile d'ambiente per dire a React dove trovare l'API del backend.
+      # 'backend' è il nome del servizio backend definito in questo stesso file.
+      # Docker Compose gestisce la risoluzione del nome in indirizzo IP.
+      - REACT_APP_API_URL=http://backend:8000
+    depends_on:
+      # Dice a Docker di avviare il backend prima di avviare il frontend
+      - backend

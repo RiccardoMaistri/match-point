@@ -1,0 +1,248 @@
+import React, { useState, useEffect } from 'react';
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import './App.css';
+import * as api from './services/api';
+
+// Importa le nuove pagine
+import HomePage from './pages/HomePage';
+import TournamentsPage from './pages/TournamentsPage';
+import TournamentDetailPage from './pages/TournamentDetailPage';
+import LoginPage from './components/LoginPage';
+import RegisterPage from './components/RegisterPage';
+import JoinTournamentPage from './components/JoinTournamentPage';
+
+function App() {
+  const [appIsLoading, setAppIsLoading] = useState(false);
+  const [appError, setAppError] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [authError, setAuthError] = useState(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
+
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Handle Google OAuth callback
+  useEffect(() => {
+    const processAuthCallback = async () => {
+      if (location.pathname === '/auth/callback') {
+        const params = new URLSearchParams(location.search);
+        const token = params.get('token');
+        if (token) {
+          localStorage.setItem('authToken', token);
+          try {
+            const userDetails = await api.getCurrentUserDetails();
+            setCurrentUser(userDetails);
+            const postLoginRedirect = localStorage.getItem('postLoginRedirect');
+            if (postLoginRedirect) {
+              localStorage.removeItem('postLoginRedirect');
+              navigate(postLoginRedirect);
+            } else {
+              navigate('/');
+            }
+          } catch (err) {
+            console.error("Error fetching user details after Google login:", err);
+            setAuthError("Failed to fetch user details after Google login.");
+            localStorage.removeItem('authToken');
+            setCurrentUser(null);
+            navigate("/login");
+          }
+        } else {
+          setAuthError("Failed to login with Google (token missing).");
+          navigate("/login");
+        }
+      }
+    };
+    processAuthCallback();
+  }, [location, navigate]);
+
+  // Check for token on initial load
+  useEffect(() => {
+    const verifyTokenAndFetchUser = async () => {
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        try {
+          const userDetails = await api.getCurrentUserDetails();
+          setCurrentUser(userDetails);
+        } catch (error) {
+          console.error("Token validation failed or failed to fetch user:", error);
+          localStorage.removeItem('authToken');
+          setCurrentUser(null);
+        }
+      }
+      setIsInitializing(false);
+    };
+    verifyTokenAndFetchUser();
+  }, []);
+
+  const handleLogin = async (email, password) => {
+    setIsAuthLoading(true);
+    setAuthError(null);
+    try {
+      const loginData = await api.loginUser(email, password);
+      localStorage.setItem('authToken', loginData.access_token);
+      const userDetails = await api.getCurrentUserDetails();
+      setCurrentUser(userDetails);
+
+      const postLoginRedirect = localStorage.getItem('postLoginRedirect');
+      if (postLoginRedirect) {
+        localStorage.removeItem('postLoginRedirect');
+        navigate(postLoginRedirect);
+      } else {
+        navigate('/');
+      }
+    } catch (err) {
+      setAuthError(err.message || 'Failed to login');
+      setCurrentUser(null);
+      localStorage.removeItem('authToken');
+    } finally {
+      setIsAuthLoading(false);
+    }
+  };
+
+  const handleRegister = async (userData) => {
+    setIsAuthLoading(true);
+    setAuthError(null);
+    try {
+      await api.registerUser(userData);
+      const loginData = await api.loginUser(userData.email, userData.password);
+      localStorage.setItem('authToken', loginData.access_token);
+      const userDetails = await api.getCurrentUserDetails();
+      setCurrentUser(userDetails);
+
+      const postLoginRedirect = localStorage.getItem('postLoginRedirect');
+      if (postLoginRedirect) {
+        localStorage.removeItem('postLoginRedirect');
+        navigate(postLoginRedirect);
+      } else {
+        navigate('/');
+      }
+    } catch (err) {
+      setAuthError(err.message || 'Failed to register');
+      setCurrentUser(null);
+      localStorage.removeItem('authToken');
+    } finally {
+      setIsAuthLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = () => {
+    window.location.href = `${api.API_BASE_URL}/login/google`;
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('postLoginRedirect');
+    localStorage.removeItem('postLoginAction');
+    setCurrentUser(null);
+    navigate('/login');
+  };
+
+  // ProtectedRoute component
+  const ProtectedRoute = ({ children }) => {
+    if (isInitializing) {
+      return <p className="text-center py-10 text-white">Initializing app...</p>;
+    }
+    if (!currentUser) {
+      localStorage.setItem('postLoginRedirect', location.pathname + location.search);
+      return <Navigate to="/login" replace />;
+    }
+    return children;
+  };
+
+  const AuthRoute = ({ children }) => {
+    if (isInitializing) {
+      return <p className="text-center py-10 text-white">Initializing app...</p>;
+    }
+    if (currentUser && !isAuthLoading) {
+      const postLoginRedirect = localStorage.getItem('postLoginRedirect');
+      return <Navigate to={postLoginRedirect || "/"} replace />;
+    }
+    return children;
+  };
+
+  if (isInitializing && location.pathname !== '/auth/callback') {
+    return <p className="text-center py-10 text-white">Initializing app...</p>;
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-900 text-white font-sans">
+      {appError && (
+        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-md shadow-md" role="alert">
+          <div className="flex">
+            <div className="py-1">
+              <svg className="fill-current h-6 w-6 text-red-500 mr-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                <path d="M2.93 17.07A10 10 0 1 1 17.07 2.93 10 10 0 0 1 2.93 17.07zM10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm-1-13h2v6h-2V5zm0 8h2v2h-2v-2z"/>
+              </svg>
+            </div>
+            <div>
+              <p className="font-bold">Error</p>
+              <p className="text-sm">{appError}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <Routes>
+        <Route path="/login" element={
+          <AuthRoute>
+            <LoginPage onLogin={handleLogin} onGoogleLogin={handleGoogleLogin} error={authError} isLoading={isAuthLoading} />
+          </AuthRoute>
+        } />
+        <Route path="/register" element={
+          <AuthRoute>
+            <RegisterPage onRegister={handleRegister} error={authError} isLoading={isAuthLoading} />
+          </AuthRoute>
+        } />
+        <Route path="/join/:inviteCode" element={
+          <JoinTournamentPage
+            currentUser={currentUser}
+            globalSetError={setAppError}
+            globalSetIsLoading={setAppIsLoading}
+            globalIsLoading={appIsLoading}
+            onLoginRequired={() => {
+              localStorage.setItem('postLoginRedirect', location.pathname + location.search);
+              navigate('/login');
+            }}
+          />
+        } />
+        <Route path="/" element={
+          <ProtectedRoute>
+            <HomePage 
+              currentUser={currentUser} 
+            />
+          </ProtectedRoute>
+        } />
+        <Route path="/tournaments" element={
+          <ProtectedRoute>
+            <TournamentsPage 
+              currentUser={currentUser} 
+            />
+          </ProtectedRoute>
+        } />
+        <Route path="/tournaments/:tournamentId" element={
+          <ProtectedRoute>
+            <TournamentDetailPage 
+              currentUser={currentUser}
+            />
+          </ProtectedRoute>
+        } />
+        <Route path="/auth/callback" element={<p className="text-center py-10 text-white">Processing login...</p>} />
+        <Route path="*" element={
+          <div className="text-center p-10">
+            <h1 className="text-3xl font-bold text-indigo-400 mb-4">404 - Page Not Found</h1>
+            <p className="text-gray-300">The page you are looking for does not exist.</p>
+            <button 
+              onClick={() => navigate('/')}
+              className="mt-6 inline-block px-6 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700"
+            >
+              Go to Homepage
+            </button>
+          </div>
+        } />
+      </Routes>
+    </div>
+  );
+}
+
+export default App;
