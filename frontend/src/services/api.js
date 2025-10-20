@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.REACT_APP_API_URL || `http://${window.location.hostname}:8001`;
+const API_BASE_URL = (process.env.REACT_APP_API_URL || '') + '/api';
 
 /**
  * Helper function to handle API responses.
@@ -180,7 +180,7 @@ export const loginUser = async (usernameOrEmail, password) => {
   formData.append('username', usernameOrEmail); // FastAPI's OAuth2PasswordRequestForm expects 'username'
   formData.append('password', password);
 
-  const response = await fetch(`${API_BASE_URL}/token`, {
+  const response = await fetch(`${API_BASE_URL}/users/token`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',

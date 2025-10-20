@@ -33,21 +33,30 @@ const MatchdayView = ({ tournament, matches, participants, onMatchUpdate, curren
     allGroupMatchesCompleted &&
     tournament?.playoff_participants > 0;
 
+  const scoreDisplay = (scores) => {
+      if (scores.length === 0) {
+          return <span className="text-center w-8 font-bold text-lg text-subtext-light dark:text-subtext-dark">-</span>;
+      }
+      return scores.map((s, i) => (
+          <span key={i} className="text-center w-8 font-bold text-lg">{s}</span>
+      ));
+  };
+
   return (
-    <div className="space-y-2">
+    <div className="space-y-4">
       {canGeneratePlayoffs && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center justify-between">
-          <p className="text-sm font-bold text-blue-900">Group stage completed.</p>
+        <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 flex items-center justify-between">
+          <p className="text-sm font-bold text-primary">Group stage completed.</p>
           <button
             onClick={handleGeneratePlayoffs}
-            className="px-3 py-1.5 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-semibold text-xs shadow-sm"
+            className="px-3 py-1.5 bg-primary text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold text-xs shadow-sm"
           >
             Generate Playoffs
           </button>
         </div>
       )}
 
-      <div className="space-y-2">
+      <div className="space-y-3">
         {matchdayMatches.length > 0 ? (
           matchdayMatches.map((match) => {
             const participant1 = participants?.find(p => p.id === match.participant1_id);
@@ -57,69 +66,61 @@ const MatchdayView = ({ tournament, matches, participants, onMatchUpdate, curren
             const p1_scores = [];
             if (match.set1_score_participant1 !== null) p1_scores.push(match.set1_score_participant1);
             if (match.set2_score_participant1 !== null) p1_scores.push(match.set2_score_participant1);
+            if (match.set3_score_participant1 !== null) p1_scores.push(match.set3_score_participant1);
 
             const p2_scores = [];
             if (match.set1_score_participant2 !== null) p2_scores.push(match.set1_score_participant2);
             if (match.set2_score_participant2 !== null) p2_scores.push(match.set2_score_participant2);
-
-            const score1Display = p1_scores.length > 0 
-              ? p1_scores.map((s, i) => <span key={i} className="text-center w-8 font-bold text-lg">{s}</span>) 
-              : <span className="text-center w-8 font-bold text-lg">-</span>;
-
-            const score2Display = p2_scores.length > 0 
-              ? p2_scores.map((s, i) => <span key={i} className="text-center w-8 font-bold text-lg">{s}</span>) 
-              : <span className="text-center w-8 font-bold text-lg">-</span>;
+            if (match.set3_score_participant2 !== null) p2_scores.push(match.set3_score_participant2);
 
             return (
-              <div key={match.id} className="bg-gray-50 rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                <div className="divide-y divide-gray-200">
-                  <div className={`flex justify-between items-center p-2.5 ${match.winner_id === match.participant1_id ? 'bg-blue-50 border-l-4 border-blue-500' : 'bg-white'}`}>
-                    <span className="font-semibold text-sm truncate flex-1">{getParticipantName(match.participant1_id)}</span>
-                    <div className="flex items-center text-gray-900 ml-3">
-                      {score1Display}
+              <div key={match.id} className="bg-card-light dark:bg-card-dark rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
+                <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                  <div className={`flex justify-between items-center p-3 ${match.winner_id === match.participant1_id ? 'bg-blue-50 dark:bg-blue-900/30 border-l-4 border-blue-500' : 'bg-white dark:bg-card-dark'}`}>
+                    <p className="font-semibold truncate text-text-light dark:text-text-dark">{getParticipantName(match.participant1_id)}</p>
+                    <div className="flex items-center text-text-light dark:text-text-dark ml-3">
+                      {scoreDisplay(p1_scores)}
                     </div>
                   </div>
-                  <div className={`flex justify-between items-center p-2.5 ${match.winner_id === match.participant2_id ? 'bg-blue-50 border-l-4 border-blue-500' : 'bg-white'}`}>
-                    <span className="font-semibold text-sm truncate flex-1">{getParticipantName(match.participant2_id)}</span>
-                    <div className="flex items-center text-gray-900 ml-3">
-                      {score2Display}
+                  <div className={`flex justify-between items-center p-3 ${match.winner_id === match.participant2_id ? 'bg-blue-50 dark:bg-blue-900/30 border-l-4 border-blue-500' : 'bg-white dark:bg-card-dark'}`}>
+                    <p className="font-semibold truncate text-text-light dark:text-text-dark">{getParticipantName(match.participant2_id)}</p>
+                    <div className="flex items-center text-text-light dark:text-text-dark ml-3">
+                      {scoreDisplay(p2_scores)}
                     </div>
                   </div>
                 </div>
-                <div className="flex justify-between items-center px-2.5 py-1.5 bg-white border-t border-gray-200">
-                  {match.status !== 'completed' && (
-                    <span className="text-[10px] text-gray-400 font-medium">Pending</span>
-                  )}
-                  {match.status !== 'completed' && isUserMatch && onRecordResult && (
+                {match.status !== 'completed' && isUserMatch && onRecordResult && (
+                  <div className="flex justify-end items-center px-3 py-2 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-700">
                     <button
                       onClick={() => onRecordResult(tournament.id, match.id)}
-                      className="px-3 py-1 text-xs font-semibold text-white bg-primary rounded-lg hover:bg-primary-hover transition-colors shadow-sm"
+                      className="px-4 py-1.5 text-xs font-semibold text-white bg-primary rounded-lg hover:bg-indigo-700 transition-colors shadow"
                     >
                       Record Result
                     </button>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             );
           })
         ) : (
-          <div className="p-4 text-center text-gray-500 text-sm">
-            No matches scheduled
+          <div className="p-4 text-center text-subtext-light dark:text-subtext-dark text-sm">
+            No matches scheduled for this day.
           </div>
         )}
       </div>
 
       {tournament?.status === 'playoffs' && (
-        <div className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-3">
+        <div className="bg-primary/10 border border-primary/20 rounded-lg p-3">
           <div className="flex items-center gap-2 mb-1.5">
-            <div className="w-7 h-7 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
-              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+            <div className="w-7 h-7 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h4 className="text-sm font-bold text-blue-800">Playoff Phase</h4>
+            <h4 className="text-sm font-bold text-primary">Group Stage</h4>
           </div>
-          <p className="text-blue-700 text-xs ml-9">
-            Top {tournament.playoff_participants} players advancing to knockout stage
+          <p className="text-primary/80 text-xs ml-9">
+            Top {tournament.playoff_participants} players advancing to knockout stage.
           </p>
         </div>
       )}

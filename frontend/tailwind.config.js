@@ -15,6 +15,8 @@ module.exports = {
         'secondary-text': '#64748b',
         background: '#f8fafc',
         'card-background': '#ffffff',
+        'card-light': '#ffffff',
+        'card-dark': '#1e293b',
         accent: '#e2e8f0',
       },
       fontFamily: {

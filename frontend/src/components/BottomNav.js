@@ -35,7 +35,7 @@ const BottomNav = () => {
         <NavLink to={standingsPath} className={({ isActive }) => `${navLinkClasses} ${isActive ? activeLinkClasses : ''} flex-1`}>
           <div className="flex h-6 w-6 items-center justify-center">
             <svg fill="currentColor" height="20px" viewBox="0 0 256 256" width="20px" xmlns="http://www.w3.org/2000/svg">
-              <path d="M232,208a8,8,0,0,1-8,8H32a8,8,0,0,1,0-16h8V136a8,8,0,0,1,8-8H80a8,8,0,0,1,8,8v64h32V88a8,8,0,0,1,8-8h32a8,8,0,0,1,8,8V200h32V40a8,8,0,0,1,8-8h32a8,8,0,0,1,8,8V200h8A8,8,0,0,1,232,208Z"></path>
+              <path d="M96,128H40a8,8,0,0,0-8,8v64a8,8,0,0,0,8,8H96a8,8,0,0,0,8-8v-64A8,8,0,0,0,96,128Zm-8,64H48V144h40Z M176,96h-56a8,8,0,0,0-8,8v96a8,8,0,0,0,8,8h56a8,8,0,0,0,8-8V104A8,8,0,0,0,176,96Zm-8,96h-40V112h40Z M224,160h-24a8,8,0,0,0-8,8v32a8,8,0,0,0,8,8h24a8,8,0,0,0,8-8v-32A8,8,0,0,0,224,160Zm-8,32h-8v-16h8Z"/>
             </svg>
           </div>
           <span className="text-[10px] font-semibold">Standings</span>

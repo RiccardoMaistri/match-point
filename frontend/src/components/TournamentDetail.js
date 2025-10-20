@@ -184,9 +184,6 @@ function TournamentDetail({ currentUser }) {
 
       {tournament.status === 'playoffs' && (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-3">
-          <div className="p-3 border-b border-gray-100">
-            <h3 className="text-base font-bold text-primary-text">Playoff Bracket</h3>
-          </div>
           <div className="p-3">
             <Bracket 
               matches={matches.filter(m => m.phase === 'playoff')} 

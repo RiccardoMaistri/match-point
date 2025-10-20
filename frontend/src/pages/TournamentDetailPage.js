@@ -20,6 +20,7 @@ const TournamentDetailPage = ({ currentUser }) => {
   const [selectedMatchday, setSelectedMatchday] = useState(1);
   const [isRecordModalOpen, setRecordModalOpen] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState(null);
+  const [isGroupStageVisible, setGroupStageVisible] = useState(true);
 
 
   const fetchTournamentDetails = async () => {
@@ -99,12 +100,15 @@ const TournamentDetailPage = ({ currentUser }) => {
       );
     } else {
       const maxMatchday = matches.reduce((max, m) => (m.match_day > max ? m.match_day : max), 0);
+      const isBracketView = tournament?.format === 'elimination' || tournament?.status === 'playoffs';
 
       return (
         <>
-          <h2 className="text-white text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
-            {tournament?.format === 'elimination' ? 'Bracket' : 'Schedule'}
-          </h2>
+          {isBracketView && (
+            <h2 className="text-white text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
+              {tournament?.format === 'elimination' ? 'Bracket' : 'Playoffs'}
+            </h2>
+          )}
           <div className="flex w-full grow bg-gray-900 p-4">
             <div className="w-full gap-1 overflow-hidden bg-gray-900 rounded-xl flex flex-col">
               {matches.length === 0 ? (
@@ -113,7 +117,7 @@ const TournamentDetailPage = ({ currentUser }) => {
                 </div>
               ) : (
                 <div className="w-full bg-center bg-no-repeat bg-cover aspect-auto rounded-none flex-1">
-                  {tournament?.format === 'elimination' || tournament?.status === 'playoffs' ? (
+                  {isBracketView ? (
                     <Bracket 
                       matches={matches} 
                       participants={participants} 
@@ -122,29 +126,45 @@ const TournamentDetailPage = ({ currentUser }) => {
                       onRecordResult={(tournamentId, matchId) => handleOpenRecordModal(matchId)}
                     />
                   ) : (
-                    <div className="bg-gray-800 p-4 rounded-lg">
-                      {maxMatchday > 0 && (
-                        <div className="flex space-x-2 mb-4">
-                          {[...Array(maxMatchday).keys()].map(i => (
-                            <button 
-                              key={i}
-                              onClick={() => setSelectedMatchday(i + 1)}
-                              className={`px-3 py-1 text-sm font-semibold rounded-lg ${selectedMatchday === i + 1 ? 'bg-primary text-white' : 'bg-gray-700 text-gray-300'}`}
-                            >
-                              Day {i + 1}
-                            </button>
-                          ))}
+                    <div className="bg-gray-800 rounded-lg">
+                      <div 
+                        className="flex justify-between items-center p-4 cursor-pointer"
+                        onClick={() => setGroupStageVisible(!isGroupStageVisible)}
+                      >
+                        <h3 className="text-white text-xl font-bold">Group Stage Matches</h3>
+                        <button className="text-gray-400 hover:text-white">
+                          {isGroupStageVisible ? 'Hide' : 'Show'}
+                        </button>
+                      </div>
+                      {isGroupStageVisible && (
+                        <div className="p-4 border-t border-gray-700">
+                          {maxMatchday > 0 && (
+                            <div className="flex space-x-2 mb-4">
+                              {[...Array(maxMatchday).keys()].map(i => (
+                                <button 
+                                  key={i}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedMatchday(i + 1);
+                                  }}
+                                  className={`px-3 py-1 text-sm font-semibold rounded-lg ${selectedMatchday === i + 1 ? 'bg-primary text-white' : 'bg-gray-700 text-gray-300'}`}
+                                >
+                                  Day {i + 1}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                          <MatchdayView
+                            tournament={tournament}
+                            matches={matches}
+                            participants={participants}
+                            onMatchUpdate={fetchTournamentDetails}
+                            currentUser={currentUser}
+                            onRecordResult={(tournamentId, matchId) => handleOpenRecordModal(matchId)}
+                            selectedMatchday={selectedMatchday}
+                          />
                         </div>
                       )}
-                      <MatchdayView
-                        tournament={tournament}
-                        matches={matches}
-                        participants={participants}
-                        onMatchUpdate={fetchTournamentDetails}
-                        currentUser={currentUser}
-                        onRecordResult={(tournamentId, matchId) => handleOpenRecordModal(matchId)}
-                        selectedMatchday={selectedMatchday}
-                      />
                     </div>
                   )}
                 </div>

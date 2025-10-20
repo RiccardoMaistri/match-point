@@ -18,12 +18,9 @@ function Participants({ currentUser }) {
       if (!tournamentId) return;
       setIsLoading(true);
       try {
-        const [tournamentData, participantsData] = await Promise.all([
-          api.getTournamentById(tournamentId),
-          api.getTournamentParticipants(tournamentId)
-        ]);
+        const tournamentData = await api.getTournamentById(tournamentId);
         setTournament(tournamentData);
-        setParticipants(participantsData);
+        setParticipants(tournamentData.participants || []);
       } catch (err) {
         setError(err.message || 'Failed to fetch data');
       } finally {
@@ -39,11 +36,8 @@ function Participants({ currentUser }) {
         return;
     }
 
-    // Construct the full URL at runtime using the current host.
     const inviteLink = `${window.location.origin}${tournament.invitation_link}`;
 
-    // The Web Share API and modern Clipboard API require a secure context (HTTPS).
-    // When on an insecure context (like a local network IP), they will not be available.
     if (navigator.share && window.isSecureContext) {
       try {
         await navigator.share({
@@ -66,7 +60,6 @@ function Participants({ currentUser }) {
         window.prompt('Copy to clipboard failed. Please copy this link manually:', inviteLink);
       }
     } else {
-      // Fallback for insecure contexts or older browsers
       window.prompt('Please copy this link to invite others:', inviteLink);
     }
   };
@@ -79,8 +72,7 @@ function Participants({ currentUser }) {
       onConfirm: async () => {
         try {
           await api.removeParticipantFromTournament(tournamentId, participantId);
-          const updatedParticipants = await api.getTournamentParticipants(tournamentId);
-          setParticipants(updatedParticipants);
+          setParticipants(prevParticipants => prevParticipants.filter(p => p.id !== participantId));
         } catch (err) {
           setError(err.message || 'Failed to remove participant');
         }
@@ -89,53 +81,55 @@ function Participants({ currentUser }) {
     });
   };
 
-  if (isLoading) return <p className="text-center py-10">Loading...</p>;
+  if (isLoading) return <p className="text-center py-10 text-subtext-light dark:text-subtext-dark">Loading...</p>;
   if (error) return <p className="text-center py-10 text-red-500">{error}</p>;
-  if (!tournament) return <p className="text-center py-10">Tournament not found.</p>;
+  if (!tournament) return <p className="text-center py-10 text-subtext-light dark:text-subtext-dark">Tournament not found.</p>;
 
   const isOwner = currentUser && tournament.user_id === currentUser.id;
   const canManageParticipants = tournament.registration_open;
 
   return (
-    <div className="p-3 pb-16">
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="flex items-center justify-between p-3 border-b border-gray-100">
-          <h3 className="text-base font-bold text-primary-text">Participants ({participants.length})</h3>
-          {isOwner && canManageParticipants && (
-            <button 
-              onClick={handleInvite}
-              className="px-3 py-1.5 text-xs font-semibold text-white bg-primary rounded-lg hover:bg-primary-hover transition-colors shadow-sm"
-            >
-              Invite
-            </button>
-          )}
-        </div>
-        {copyMessage && <p className="text-xs text-blue-600 px-3 py-2">{copyMessage}</p>}
-        {participants.length === 0 ? (
-          <p className="text-sm text-secondary-text py-8 text-center">No participants yet.</p>
-        ) : (
-          <div className="divide-y divide-gray-100">
-            {participants.map((participant) => (
-              <div key={participant.id} className="flex justify-between items-center p-3 hover:bg-gray-50 transition-colors">
-                <div className="flex-grow min-w-0">
-                  <p className="font-semibold text-primary-text text-sm truncate">{participant.name}</p>
-                  <p className="text-[11px] text-secondary-text truncate">{participant.email}</p>
+    <div className="max-w-md mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-24">
+      <div className="space-y-4">
+        <div className="bg-card-light dark:bg-card-dark rounded-lg shadow-md overflow-hidden">
+            <div className="p-4">
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-bold text-text-light dark:text-text-dark">Participants ({participants.length})</h3>
+                    {isOwner && canManageParticipants && (
+                        <button 
+                        onClick={handleInvite}
+                        className="px-4 py-2 text-sm font-semibold text-white bg-primary rounded-lg hover:bg-indigo-700 transition-colors shadow-lg"
+                        >
+                        Invite
+                        </button>
+                    )}
                 </div>
-                {isOwner && (
-                  <button
-                    onClick={() => handleRemoveParticipant(participant.id)}
-                    className="ml-3 w-8 h-8 flex items-center justify-center text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
-                    title="Remove participant"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
+                {copyMessage && <p className="text-sm text-primary dark:text-primary mb-4">{copyMessage}</p>}
+                {participants.length === 0 ? (
+                <p className="text-sm text-subtext-light dark:text-subtext-dark py-8 text-center">No participants yet.</p>
+                ) : (
+                <div className="space-y-3">
+                    {participants.map((participant, index) => (
+                    <div key={participant.id} className={`flex justify-between items-center p-3 rounded-lg ${index % 2 === 0 ? 'bg-gray-50 dark:bg-gray-800/50' : ''}`}>
+                        <div className="flex-grow min-w-0">
+                        <p className="font-semibold text-text-light dark:text-text-dark truncate">{participant.name}</p>
+                        <p className="text-sm text-subtext-light dark:text-subtext-dark truncate">{participant.email}</p>
+                        </div>
+                        {isOwner && (
+                        <button
+                            onClick={() => handleRemoveParticipant(participant.id)}
+                            className="ml-3 w-8 h-8 flex items-center justify-center text-red-500 hover:bg-red-100 dark:hover:bg-red-500/10 rounded-full transition-colors flex-shrink-0"
+                            title="Remove participant"
+                        >
+                            <span className="material-symbols-outlined text-base">delete</span>
+                        </button>
+                        )}
+                    </div>
+                    ))}
+                </div>
                 )}
-              </div>
-            ))}
-          </div>
-        )}
+            </div>
+        </div>
       </div>
 
       <ConfirmModal

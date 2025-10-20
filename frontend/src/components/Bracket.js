@@ -207,24 +207,6 @@ const Bracket = ({ matches, participants, tournament, currentUser, onRecordResul
                 })}
               </div>
             )}
-            
-            {roundNumber === semifinalsRound && semifinalsCompleted && (
-              <div className="p-3 border-t border-gray-100">
-                <div className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-3">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <div className="w-7 h-7 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
-                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                    <h4 className="text-sm font-bold text-blue-800">Playoff Phase</h4>
-                  </div>
-                  <p className="text-blue-700 text-xs ml-9">
-                    Top {tournament?.playoff_participants || 'N'} players advancing to knockout stage
-                  </p>
-                </div>
-              </div>
-            )}
           </div>
         );
       })}

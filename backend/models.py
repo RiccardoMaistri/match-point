@@ -87,9 +87,7 @@ class TournamentCreate(BaseModel):
     name: str
     tournament_type: Literal['single', 'double']
     format: Literal['round_robin'] = 'round_robin'
-    start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
-    match_frequency_days: int = 7
     playoff_participants: int = 4
 
     class Config:
@@ -102,7 +100,6 @@ class Tournament(BaseModel):
     name: str
     tournament_type: Literal['single', 'double']
     format: Literal['elimination', 'round_robin'] = 'round_robin'
-    start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
     due_date: Optional[datetime] = None
     participants: List[Participant] = []
@@ -110,7 +107,6 @@ class Tournament(BaseModel):
     registration_open: bool = True
     status: Literal['open', 'group_stage', 'playoffs', 'completed'] = 'open'
     invitation_link: Optional[str] = None
-    match_frequency_days: int = 7
     playoff_participants: int = 4
     total_matchdays: Optional[int] = None
 
