@@ -152,9 +152,9 @@ function TournamentDetail({ currentUser }) {
                   </select>
                 </>
               )}
-              {isOwner && canGenerateMatches && (
+              {isOwner && canGenerateMatches && tournament.status === 'open' && (
                 <button onClick={handleGenerateMatches} className="px-3 py-1.5 text-xs font-semibold text-primary border border-primary rounded-lg hover:bg-primary hover:text-white transition-colors">
-                  {matches.length > 0 ? 'Regenerate' : 'Generate'}
+                  {matches.length > 0 ? 'Regenerate' : 'Kick Off'}
                 </button>
               )}
             </div>
@@ -171,6 +171,8 @@ function TournamentDetail({ currentUser }) {
               <MatchdayView 
                 tournament={tournament} 
                 onMatchUpdate={fetchTournamentData}
+                matches={matches}
+                participants={participants}
                 currentUser={currentUser}
                 onRecordResult={(tId, mId) => openRecordResultModal(mId)}
                 selectedMatchday={selectedMatchday}
@@ -182,11 +184,14 @@ function TournamentDetail({ currentUser }) {
 
       {tournament.status === 'playoffs' && (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-3">
-          <div className="p-3 border-b border-gray-100">
-            <h3 className="text-base font-bold text-primary-text">Playoff Bracket</h3>
-          </div>
           <div className="p-3">
-            <Bracket matches={matches.filter(m => m.phase === 'playoff')} participants={participants} tournament={tournament} />
+            <Bracket 
+              matches={matches.filter(m => m.phase === 'playoff')} 
+              participants={participants} 
+              tournament={tournament} 
+              currentUser={currentUser}
+              onRecordResult={(tId, mId) => openRecordResultModal(mId)}
+            />
           </div>
         </div>
       )}

@@ -35,18 +35,25 @@ function App() {
   // Check for token on initial load
   useEffect(() => {
     const verifyTokenAndFetchUser = async () => {
+      console.log("App.js: Initializing app, checking token...");
       const token = localStorage.getItem('authToken');
       if (token) {
+        console.log("App.js: Auth token found, verifying...");
         try {
           const userDetails = await api.getCurrentUserDetails();
           setCurrentUser(userDetails);
+          console.log("App.js: Token valid, currentUser set:", userDetails);
         } catch (error) {
-          console.error("Token validation failed:", error);
+          console.error("App.js: Token validation failed:", error);
           localStorage.removeItem('authToken');
           setCurrentUser(null);
+          console.log("App.js: Token invalid, currentUser set to null.");
         }
+      } else {
+        console.log("App.js: No auth token found, currentUser remains null.");
       }
       setIsInitializing(false);
+      console.log("App.js: Initialization complete. isInitializing set to false.");
     };
     verifyTokenAndFetchUser();
   }, []);
@@ -191,24 +198,30 @@ function App() {
   };
 
   const ProtectedRoute = ({ children }) => {
+    console.log("ProtectedRoute: isInitializing", isInitializing, "currentUser", !!currentUser, "location", location.pathname);
     if (isInitializing) {
       return <p className="text-center py-10">Initializing app...</p>;
     }
     if (!currentUser) {
+      console.log("ProtectedRoute: No current user, redirecting to /login");
       localStorage.setItem('postLoginRedirect', location.pathname + location.search);
       return <Navigate to="/login" replace />;
     }
+    console.log("ProtectedRoute: Current user exists, rendering children.");
     return children;
   };
 
   const AuthRoute = ({ children }) => {
+     console.log("AuthRoute: isInitializing", isInitializing, "currentUser", !!currentUser, "isAuthLoading", isAuthLoading, "location", location.pathname);
      if (isInitializing) {
       return <p className="text-center py-10">Initializing app...</p>;
     }
     if (currentUser && !isAuthLoading) {
       const postLoginRedirect = localStorage.getItem('postLoginRedirect') || "/";
+      console.log("AuthRoute: Current user exists, redirecting to postLoginRedirect:", postLoginRedirect);
       return <Navigate to={postLoginRedirect} replace />;
     }
+    console.log("AuthRoute: No current user or auth loading, rendering children.");
     return children;
   };
 
@@ -248,7 +261,7 @@ function App() {
     <div className="relative flex size-full min-h-screen flex-col justify-between group/design-root overflow-x-hidden bg-background">
       <div className="flex-grow">
         <Header 
-          title="My Tournaments" 
+          title="MatchPoint" 
           tournaments={currentUser ? tournaments : null}
           currentTournamentId={currentTournamentId}
           onTournamentChange={handleTournamentChange}

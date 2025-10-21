@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 from typing import List, Literal, Optional
 
 
@@ -9,6 +9,10 @@ class Participant(BaseModel):
     name: str
     email: str
     ranking: Optional[int] = None
+
+    @field_validator('email')
+    def email_to_lower(cls, v):
+        return v.lower()
 
 
 class Match(BaseModel):
@@ -34,38 +38,57 @@ class Match(BaseModel):
 
 class User(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    email: str = Field(..., unique=True)
+    email: Optional[EmailStr] = None
+    username: Optional[str] = None
+    name: Optional[str] = None
     hashed_password: Optional[str] = None
     is_active: bool = True
 
-    # Timestamps can be added later if needed
-    # created_at: Optional[datetime] = None
-    # updated_at: Optional[datetime] = None
+    @model_validator(mode='after')
+    def check_at_least_one_identifier(self):
+        if not self.email and not self.username:
+            raise ValueError('Either email or username must be provided')
+        return self
+
+    @field_validator('email')
+    def email_to_lower(cls, v):
+        return v.lower() if v else v
+
+    @field_validator('username')
+    def username_to_lower(cls, v):
+        return v.lower() if v else v
 
     class Config:
         from_attributes = True
 
 
 class UserCreate(BaseModel):
-    email: EmailStr
+    email: Optional[EmailStr] = None
+    username: Optional[str] = None
     password: str = Field(..., min_length=8)
-    # Optional fields during registration
-    name: Optional[str] = None  # If you want to collect name during registration
+    name: Optional[str] = None
 
-    # Example of a password confirmation field, handled in the endpoint logic
-    # password_confirm: str
+    @model_validator(mode='after')
+    def check_at_least_one_identifier(self):
+        if not self.email and not self.username:
+            raise ValueError('Either email or username must be provided')
+        return self
+
+    @field_validator('email')
+    def email_to_lower(cls, v: Optional[EmailStr]) -> Optional[str]:
+        return str(v).lower() if v else None
+
+    @field_validator('username')
+    def username_to_lower(cls, v: Optional[str]) -> Optional[str]:
+        return v.lower() if v else None
 
 
 class TournamentCreate(BaseModel):
     name: str
     tournament_type: Literal['single', 'double']
-    format: Literal['round_robin'] = 'round_robin'  # Only round_robin supported for new tournaments
-    start_date: Optional[datetime] = None
+    format: Literal['round_robin'] = 'round_robin'
     end_date: Optional[datetime] = None
-    registration_open: bool = True
-    invitation_link: Optional[str] = None
-    match_frequency_days: int = 7  # Days between matchdays
-    playoff_participants: int = 4  # Number advancing to playoffs
+    playoff_participants: int = 4
 
     class Config:
         from_attributes = True
@@ -76,18 +99,15 @@ class Tournament(BaseModel):
     user_id: str
     name: str
     tournament_type: Literal['single', 'double']
-    format: Literal['elimination', 'round_robin'] = 'round_robin'  # Backward compatible, but only round_robin for new
-    start_date: Optional[datetime] = None
+    format: Literal['elimination', 'round_robin'] = 'round_robin'
     end_date: Optional[datetime] = None
     due_date: Optional[datetime] = None
     participants: List[Participant] = []
     matches: List[Match] = []
     registration_open: bool = True
-    status: Literal['open', 'in_progress', 'playoffs', 'completed'] = 'open'
+    status: Literal['open', 'group_stage', 'playoffs', 'completed'] = 'open'
     invitation_link: Optional[str] = None
-    match_frequency_days: int = 7  # Days between matchdays
-    playoff_participants: int = 4  # Number advancing to playoffs
-    current_matchday: int = 1
+    playoff_participants: int = 4
     total_matchdays: Optional[int] = None
 
     class Config:
