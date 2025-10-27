@@ -3,39 +3,35 @@ import TournamentCard from './TournamentCard';
 
 const TournamentList = ({ tournaments, onView }) => {
   if (!tournaments || tournaments.length === 0) {
-    return <p className="text-secondary-text py-4 text-center">No tournaments found.</p>;
+    return <p className="text-text-on-light dark:text-text-on-dark-secondary py-4 text-center">No tournaments found.</p>;
   }
 
   const activeTournaments = tournaments.filter(t => t.status !== 'completed');
   const pastTournaments = tournaments.filter(t => t.status === 'completed');
 
   return (
-    <div>
+    <div className="space-y-6">
       {activeTournaments.length > 0 && (
-        <section className="px-4 pt-6 pb-3">
-          <h2 className="text-primary-text text-lg font-semibold leading-tight tracking-tight">Active</h2>
-        </section>
-      )}
-      <div className="grid gap-4 px-4">
-        {activeTournaments.map((tournament) => (
-          <div key={tournament.id} onClick={() => onView(tournament.id)} className="cursor-pointer">
-            <TournamentCard tournament={tournament} onView={onView} />
+        <div>
+          <h2 className="text-xl font-bold text-text-on-light dark:text-text-on-dark px-4 pb-2">Active</h2>
+          <div className="space-y-4">
+            {activeTournaments.map((tournament) => (
+              <TournamentCard key={tournament.id} tournament={tournament} onView={onView} />
+            ))}
           </div>
-        ))}
-      </div>
+        </div>
+      )}
 
       {pastTournaments.length > 0 && (
-        <section className="px-4 pt-8 pb-3">
-          <h2 className="text-primary-text text-lg font-semibold leading-tight tracking-tight">Past</h2>
-        </section>
-      )}
-      <div className="grid gap-4 px-4">
-        {pastTournaments.map((tournament) => (
-          <div key={tournament.id} onClick={() => onView(tournament.id)} className="cursor-pointer">
-            <TournamentCard tournament={tournament} onView={onView} />
+        <div>
+          <h2 className="text-xl font-bold text-text-on-light dark:text-text-on-dark px-4 pb-2">Past</h2>
+          <div className="space-y-4">
+            {pastTournaments.map((tournament) => (
+              <TournamentCard key={tournament.id} tournament={tournament} onView={onView} />
+            ))}
           </div>
-        ))}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

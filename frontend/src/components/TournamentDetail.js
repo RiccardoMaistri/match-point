@@ -1,223 +1,133 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
-import * as api from '../services/api';
+import { useParams, useNavigate } from 'react-router-dom';
+import MatchList from './MatchList';
 import RecordResultModal from './RecordResultModal';
-import Bracket from './Bracket';
-import ConfirmModal from './ConfirmModal';
-import MatchdayView from './MatchdayView';
+import * as api from '../services/api';
 
-function TournamentDetail({ currentUser }) {
+const TournamentDetail = ({ currentUser }) => {
   const { tournamentId } = useParams();
+  const navigate = useNavigate();
   const [tournament, setTournament] = useState(null);
-  const [participants, setParticipants] = useState([]);
   const [matches, setMatches] = useState([]);
-  const [results, setResults] = useState([]);
+  const [participants, setParticipants] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isResultModalOpen, setIsResultModalOpen] = useState(false);
-  const [currentMatchForResult, setCurrentMatchForResult] = useState(null);
-  const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
+  const [isRecordModalOpen, setRecordModalOpen] = useState(false);
+  const [selectedMatch, setSelectedMatch] = useState(null);
 
+  const fetchTournamentDetails = useCallback(async () => {
+    const id = tournamentId || (await api.getTournaments())[0]?.id;
+    if (!id) {
+      setIsLoading(false);
+      setError('No tournaments found.');
+      return;
+    }
 
-  const [selectedMatchday, setSelectedMatchday] = useState(1);
+    if (!tournamentId) {
+        navigate(`/tournaments/${id}`, { replace: true });
+    }
 
-  const fetchTournamentData = useCallback(async () => {
-    if (!tournamentId) return;
     setIsLoading(true);
-    setError(null);
     try {
-      const tournamentData = await api.getTournamentById(tournamentId);
+      const [tournamentData, matchesData, participantsData] = await Promise.all([
+        api.getTournamentById(id),
+        api.getTournamentMatches(id),
+        api.getTournamentParticipants(id),
+      ]);
       setTournament(tournamentData);
-      const participantsData = await api.getTournamentParticipants(tournamentId);
-      setParticipants(participantsData);
-      const matchesData = await api.getTournamentMatches(tournamentId);
       setMatches(matchesData);
-      if (tournamentData.status === 'completed') {
-        const resultsData = await api.getTournamentResults(tournamentId);
-        setResults(resultsData);
-      }
+      setParticipants(participantsData);
     } catch (err) {
-      setError(err.message || `Failed to fetch tournament details`);
+      setError(err.message || 'Failed to fetch tournament details');
     } finally {
       setIsLoading(false);
     }
-  }, [tournamentId]);
+  }, [tournamentId, navigate]);
 
   useEffect(() => {
-    fetchTournamentData();
-  }, [fetchTournamentData]);
+    fetchTournamentDetails();
+  }, [fetchTournamentDetails]);
 
-
-
-  const handleRemoveParticipant = async (tournamentId, participantId) => {
-    setConfirmModal({
-      isOpen: true,
-      title: 'Remove Participant',
-      message: 'Are you sure you want to remove this participant?',
-      onConfirm: async () => {
-        try {
-          await api.removeParticipantFromTournament(tournamentId, participantId);
-          await fetchTournamentData();
-        } catch (err) {
-          setError(err.message || 'Failed to remove participant');
-        }
-        setConfirmModal({ isOpen: false });
-      }
-    });
+  const handleOpenRecordModal = (match) => {
+    setSelectedMatch(match);
+    setRecordModalOpen(true);
   };
 
-  const handleGenerateMatches = async () => {
-    if (!tournament?.id) return;
-    setConfirmModal({
-      isOpen: true,
-      title: 'Generate Matches',
-      message: matches.length > 0 ? 'This will regenerate all matches. Continue?' : 'Generate matches for this tournament?',
-      onConfirm: async () => {
-        try {
-          await api.generateMatches(tournament.id);
-          await fetchTournamentData();
-        } catch (err) {
-          setError(err.message || 'Failed to generate matches');
-        }
-        setConfirmModal({ isOpen: false });
-      }
-    });
+  const handleCloseRecordModal = () => {
+    setRecordModalOpen(false);
+    setSelectedMatch(null);
   };
 
-  const openRecordResultModal = (matchId) => {
-    const matchToRecord = matches.find(m => m.id === matchId);
-    if (matchToRecord) {
-      setCurrentMatchForResult(matchToRecord);
-      setIsResultModalOpen(true);
-      setError(null);
-    }
-  };
-
-  const handleSubmitMatchResult = async (tournamentId, matchId, resultData) => {
+  const handleSubmitResult = async (tId, matchId, resultData) => {
     try {
-      await api.recordMatchResult(tournamentId, matchId, resultData);
-      await fetchTournamentData();
-      setIsResultModalOpen(false);
-      setCurrentMatchForResult(null);
-    } catch (err) {
-      setError(err.message || 'Failed to record match result.');
+      await api.recordMatchResult(tId, matchId, resultData);
+      fetchTournamentDetails();
+    } catch (error) {
+      setError(error.message || 'Failed to record result');
+    } finally {
+      handleCloseRecordModal();
     }
   };
 
-  if (isLoading) {
-    return <p className="text-center py-10">Loading tournament...</p>;
-  }
+  if (isLoading) return <div className="text-center p-4">Loading...</div>;
+  if (error) return <div className="text-center p-4 text-red-500">Error: {error}</div>;
+  if (!tournament) return <div className="text-center p-4">Tournament not found.</div>;
 
-  if (error) {
-    return <p className="text-center py-10 text-red-500">{error}</p>;
-  }
-
-  if (!tournament) {
-    return <p className="text-center py-10">Tournament not found.</p>;
-  }
-
-  const isOwner = currentUser && tournament && tournament.user_id === currentUser.id;
-  const canGenerateMatches = participants.length >= 2 && participants.length >= tournament.playoff_participants;
-
-
-
-  const Section = ({ title, children }) => (
-    <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200 mb-3">
-      <h3 className="text-base font-bold text-primary-text mb-2">{title}</h3>
-      {children}
-    </div>
-  );
+  const groupStageMatches = matches.filter(m => m.stage === 'round_robin');
+  const playoffMatches = matches.filter(m => m.stage !== 'round_robin');
 
   return (
-    <div className="p-3 pb-16">
+    <>
+      {groupStageMatches.length > 0 && (
+        <CollapsibleSection title="Group Stage" subtitle="Top 8 players advance">
+          <MatchList matches={groupStageMatches} participants={participants} onRecordResult={handleOpenRecordModal} />
+        </CollapsibleSection>
+      )}
 
-      {tournament.format === 'round_robin' && (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-3">
-          <div className="flex items-center justify-between p-3 border-b border-gray-100">
-            <h3 className="text-base font-bold text-primary-text">Group Stage</h3>
-            <div className="flex items-center gap-2">
-              {tournament.status !== 'open' && (
-                <>
-                  <span className="text-[10px] text-secondary-text font-semibold">DAY</span>
-                  <select
-                    value={selectedMatchday}
-                    onChange={(e) => setSelectedMatchday(parseInt(e.target.value))}
-                    className="w-14 px-2 py-1 text-sm font-semibold border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-white"
-                  >
-                    {Array.from({ length: tournament.total_matchdays || 1 }, (_, i) => (
-                      <option key={i + 1} value={i + 1}>
-                        {i + 1}
-                      </option>
-                    ))}
-                  </select>
-                </>
-              )}
-              {isOwner && canGenerateMatches && tournament.status === 'open' && (
-                <button onClick={handleGenerateMatches} className="px-3 py-1.5 text-xs font-semibold text-primary border border-primary rounded-lg hover:bg-primary hover:text-white transition-colors">
-                  {matches.length > 0 ? 'Regenerate' : 'Kick Off'}
-                </button>
-              )}
-            </div>
-          </div>
-          {!canGenerateMatches && tournament.status === 'open' && isOwner && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 m-3">
-              <p className="text-xs text-blue-800">
-                ℹ️ Add at least 2 participants to generate matches.
-              </p>
-            </div>
-          )}
-          {tournament.status !== 'open' && (
-            <div className="p-3">
-              <MatchdayView 
-                tournament={tournament} 
-                onMatchUpdate={fetchTournamentData}
-                matches={matches}
-                participants={participants}
-                currentUser={currentUser}
-                onRecordResult={(tId, mId) => openRecordResultModal(mId)}
-                selectedMatchday={selectedMatchday}
-              />
-            </div>
-          )}
+      {playoffMatches.length > 0 && (
+        <CollapsibleSection title="Quarterfinals" subtitle="Best of 3 sets">
+          <MatchList matches={playoffMatches} participants={participants} onRecordResult={handleOpenRecordModal} />
+        </CollapsibleSection>
+      )}
+
+      {matches.length === 0 && (
+        <div className="text-center p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+          <p className="text-gray-500 dark:text-gray-400">No matches scheduled yet.</p>
         </div>
       )}
 
-      {tournament.status === 'playoffs' && (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-3">
-          <div className="p-3">
-            <Bracket 
-              matches={matches.filter(m => m.phase === 'playoff')} 
-              participants={participants} 
-              tournament={tournament} 
-              currentUser={currentUser}
-              onRecordResult={(tId, mId) => openRecordResultModal(mId)}
-            />
-          </div>
-        </div>
+      {selectedMatch && (
+        <RecordResultModal
+          isOpen={isRecordModalOpen}
+          onClose={handleCloseRecordModal}
+          match={selectedMatch}
+          participants={participants}
+          onSubmitResult={handleSubmitResult}
+          tournamentId={tournament.id}
+        />
       )}
-
-
-
-      {tournament.status === 'completed' && (
-        <Section title="Final Results">
-          {results.length > 0 ? (
-            <ul className="list-disc pl-5 space-y-2 text-primary-text">
-              {results.map((result, index) => <li key={index}><span className="font-bold">{result.rank}. {result.participant}</span>{result.wins !== undefined && ` (${result.wins} wins)`}</li>)}
-            </ul>
-          ) : <p className="text-secondary-text">No results available.</p>}
-        </Section>
-      )}
-
-      {isResultModalOpen && currentMatchForResult && <RecordResultModal isOpen={isResultModalOpen} onClose={() => setIsResultModalOpen(false)} match={currentMatchForResult} participants={participants} onSubmitResult={handleSubmitMatchResult} tournamentId={tournament.id} />}
-      <ConfirmModal
-        isOpen={confirmModal.isOpen}
-        title={confirmModal.title}
-        message={confirmModal.message}
-        onConfirm={confirmModal.onConfirm}
-        onCancel={() => setConfirmModal({ isOpen: false })}
-      />
-    </div>
+    </>
   );
-}
+};
+
+const CollapsibleSection = ({ title, subtitle, children }) => {
+  const [expanded, setExpanded] = useState(true);
+
+  return (
+    <section>
+      <div onClick={() => setExpanded(!expanded)} className="flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm cursor-pointer">
+        <div>
+          <h2 className="font-bold text-gray-900 dark:text-white">{title}</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{subtitle}</p>
+        </div>
+        <span className={`material-icons text-gray-500 dark:text-gray-400 transition-transform ${expanded ? 'rotate-180' : ''}`}>{expanded ? 'expand_less' : 'expand_more'}</span>
+      </div>
+      <div className={`collapsible-content ${expanded ? 'expanded' : ''} space-y-3 mt-3`}>
+        {children}
+      </div>
+    </section>
+  );
+};
 
 export default TournamentDetail;
+

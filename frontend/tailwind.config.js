@@ -8,24 +8,39 @@ module.exports = {
     extend: {
       colors: {
         primary: {
-          DEFAULT: '#2563eb',
-          hover: '#1d4ed8',
+          DEFAULT: '#4285F4',
+          hover: '#3c78d8',
         },
-        'primary-text': '#1e293b',
-        'secondary-text': '#64748b',
-        background: '#f8fafc',
-        'card-background': '#ffffff',
-        'card-light': '#ffffff',
-        'card-dark': '#1e293b',
-        accent: '#e2e8f0',
+        background: {
+          light: '#F8F9FA',
+          dark: '#121212',
+        },
+        surface: {
+          light: '#FFFFFF',
+          dark: '#1E1E1E',
+        },
+        text: {
+          'on-light': '#202124',
+          'on-dark': '#E8EAED',
+          'on-dark-secondary': '#969BA1',
+        },
+        border: {
+          light: '#E0E0E0',
+          dark: '#3C4043',
+        }
       },
       fontFamily: {
-        sans: ['Manrope', 'Noto Sans', 'sans-serif'],
+        display: ["Inter", "sans-serif"],
+      },
+      borderRadius: {
+        DEFAULT: "0.75rem",
+        lg: "1rem",
+        full: "9999px",
       },
     },
   },
   plugins: [
     require('@tailwindcss/forms'),
-    require('@tailwindcss/container-queries'),
+    // require('@tailwindcss/typography'), // Temporarily disabled
   ],
 }

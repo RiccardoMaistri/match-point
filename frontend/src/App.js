@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
-import './App.css';
 import TournamentList from './components/TournamentList';
 import TournamentForm from './components/TournamentForm';
 import TournamentDetail from './components/TournamentDetail';
@@ -132,12 +131,6 @@ function App() {
     }
   }, [fetchTournaments, currentUser]);
 
-  useEffect(() => {
-    if (currentUser && tournaments.length > 0 && location.pathname === '/') {
-      navigate(`/tournaments/${tournaments[0].id}`, { replace: true });
-    }
-  }, [currentUser, tournaments, location.pathname, navigate]);
-
   const handleCreateTournamentSubmit = async (tournamentData) => {
     setAppIsLoading(true);
     setAppError(null);
@@ -207,70 +200,51 @@ function App() {
   };
 
   const ProtectedRoute = ({ children }) => {
-    console.log("ProtectedRoute: isInitializing", isInitializing, "currentUser", !!currentUser, "location", location.pathname);
     if (isInitializing) {
-      return <p className="text-center py-10">Initializing app...</p>;
+      return <div className="text-center py-10">Initializing app...</div>;
     }
     if (!currentUser) {
-      console.log("ProtectedRoute: No current user, redirecting to /login");
       localStorage.setItem('postLoginRedirect', location.pathname + location.search);
       return <Navigate to="/login" replace />;
     }
-    console.log("ProtectedRoute: Current user exists, rendering children.");
     return children;
   };
 
   const AuthRoute = ({ children }) => {
-     console.log("AuthRoute: isInitializing", isInitializing, "currentUser", !!currentUser, "isAuthLoading", isAuthLoading, "location", location.pathname);
      if (isInitializing) {
-      return <p className="text-center py-10">Initializing app...</p>;
+      return <div className="text-center py-10">Initializing app...</div>;
     }
     if (currentUser && !isAuthLoading) {
       const postLoginRedirect = localStorage.getItem('postLoginRedirect') || "/";
-      console.log("AuthRoute: Current user exists, redirecting to postLoginRedirect:", postLoginRedirect);
       return <Navigate to={postLoginRedirect} replace />;
     }
-    console.log("AuthRoute: No current user or auth loading, rendering children.");
     return children;
   };
 
 
   if (isInitializing) {
-    return <p className="text-center py-10">Initializing app...</p>;
+    return <div className="text-center py-10">Initializing app...</div>;
   }
 
   const getCurrentTournamentId = () => {
-    if (location.pathname.startsWith('/tournaments/')) {
-      return location.pathname.split('/')[2];
-    }
-    if (location.pathname.startsWith('/standings/')) {
-      return location.pathname.split('/')[2];
-    }
-    if (location.pathname.startsWith('/participants/')) {
-      return location.pathname.split('/')[2];
-    }
-    return null;
+    const path = location.pathname;
+    if (path.startsWith('/tournaments/')) return path.split('/')[2];
+    if (path.startsWith('/standings/')) return path.split('/')[2];
+    if (path.startsWith('/participants/')) return path.split('/')[2];
+    return tournaments.length > 0 ? tournaments[0].id : null;
   };
 
   const currentTournamentId = getCurrentTournamentId();
 
   const handleTournamentChange = (tournamentId) => {
-    if (location.pathname.startsWith('/tournaments/')) {
-      navigate(`/tournaments/${tournamentId}`);
-    } else if (location.pathname.startsWith('/standings/')) {
-      navigate(`/standings/${tournamentId}`);
-    } else if (location.pathname.startsWith('/participants/')) {
-      navigate(`/participants/${tournamentId}`);
-    } else {
-      navigate(`/tournaments/${tournamentId}`);
-    }
+    const basePath = location.pathname.split('/')[1];
+    const newPath = [`/${basePath}`, tournamentId].filter(Boolean).join('/');
+    navigate(newPath);
   };
 
   return (
-    <div className="relative flex size-full min-h-screen flex-col justify-between group/design-root overflow-x-hidden bg-background">
-      <div className="flex-grow">
+    <div className="max-w-md mx-auto min-h-screen flex flex-col font-display bg-background-light dark:bg-background-dark text-text-on-light dark:text-text-on-dark">
         <Header 
-          title="MatchPoint" 
           tournaments={currentUser ? tournaments : null}
           currentTournamentId={currentTournamentId}
           onTournamentChange={handleTournamentChange}
@@ -286,7 +260,7 @@ function App() {
             }}
           />
         )}
-        <main className="pb-24">
+        <main className="flex-grow p-4 space-y-4">
           {appError && (
             <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-md shadow-md" role="alert">
               <p className="font-bold">Error</p>
@@ -317,7 +291,7 @@ function App() {
             } />
              <Route path="/" element={
               <ProtectedRoute>
-                <div className="text-center py-10">Loading...</div>
+                <TournamentDetail currentUser={currentUser} />
               </ProtectedRoute>
             } />
 
@@ -350,7 +324,7 @@ function App() {
             <Route path="*" element={
                 <div className="text-center p-10">
                     <h1 className="text-3xl font-bold text-primary mb-4">404 - Page Not Found</h1>
-                    <p className="text-secondary-text">The page you are looking for does not exist.</p>
+                    <p>The page you are looking for does not exist.</p>
                     <button onClick={() => navigate('/')} className="mt-6 inline-block px-6 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary-hover">
                         Go to Homepage
                     </button>
@@ -358,7 +332,6 @@ function App() {
             } />
           </Routes>
         </main>
-      </div>
       {currentUser && <BottomNav />}
       <InstallPrompt />
       <ConfirmModal
