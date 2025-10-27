@@ -142,9 +142,14 @@ function App() {
     setAppIsLoading(true);
     setAppError(null);
     try {
-      await api.createTournament(tournamentData);
-      await fetchTournaments();
+      const newTournament = await api.createTournament(tournamentData);
+      setTournaments(prev => [newTournament, ...prev].sort((a, b) => {
+        const dateA = new Date(a.start_date || 0);
+        const dateB = new Date(b.start_date || 0);
+        return dateB - dateA;
+      }));
       setShowCreateForm(false);
+      navigate(`/tournaments/${newTournament.id}`); // Redirect to the new tournament
     } catch (err) {
       setAppError(err.message || 'Failed to create tournament');
     } finally {
@@ -165,8 +170,12 @@ function App() {
     setAppIsLoading(true);
     setAppError(null);
     try {
-      await api.updateTournament(editingTournament.id, tournamentData);
-      await fetchTournaments();
+      const updatedTournament = await api.updateTournament(editingTournament.id, tournamentData);
+      setTournaments(prev => prev.map(t => t.id === updatedTournament.id ? updatedTournament : t).sort((a, b) => {
+        const dateA = new Date(a.start_date || 0);
+        const dateB = new Date(b.start_date || 0);
+        return dateB - dateA;
+      }));
       setShowCreateForm(false);
       setEditingTournament(null);
     } catch (err) {
@@ -296,13 +305,15 @@ function App() {
               </AuthRoute>
             } />
             <Route path="/join/:inviteCode" element={
-              <JoinTournamentPage
-                currentUser={currentUser}
-                globalSetError={setAppError}
-                globalSetIsLoading={setAppIsLoading}
-                globalIsLoading={appIsLoading}
-                onLoginRequired={() => navigate('/login')}
-              />
+              <ProtectedRoute>
+                <JoinTournamentPage
+                  currentUser={currentUser}
+                  globalSetError={setAppError}
+                  globalSetIsLoading={setAppIsLoading}
+                  globalIsLoading={appIsLoading}
+                  onLoginRequired={() => navigate('/login')}
+                />
+              </ProtectedRoute>
             } />
              <Route path="/" element={
               <ProtectedRoute>

@@ -191,10 +191,10 @@ async def get_tournament_by_invite_code(
         ..., description="The invitation code (UUID part of the link)"
     ),
 ):
-    relative_invite_link = f"/join/{invite_code}"
     all_tournaments = get_all_tournaments_db()
     for t_dict in all_tournaments:
-        if t_dict.get("invitation_link") == relative_invite_link:
+        stored_invite_link = t_dict.get("invitation_link")
+        if stored_invite_link and stored_invite_link.endswith(f"/{invite_code}"):
             return Tournament(**t_dict)
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
