@@ -133,7 +133,7 @@ const RegisterPage = ({ onRegister, error, isLoading }) => {
         </form>
 
         <p className="text-center text-sm text-secondary-text mt-8">
-          Already have an account? <Link to="/login" className="font-medium text-primary hover:text-primary-hover">Login here</Link>.
+          Already have an account? <Link to="/login" className="font-medium text-primary hover:text-primary-hover">Login</Link>.
         </p>
       </div>
     </div>

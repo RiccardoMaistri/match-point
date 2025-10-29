@@ -36,6 +36,13 @@ async def create_tournament(
         **tournament_payload.model_dump(), user_id=current_user.id
     )
 
+    if current_user.email:
+        creator_as_participant = Participant(
+            name=current_user.name or current_user.email,
+            email=current_user.email,
+        )
+        new_tournament_data.participants.append(creator_as_participant)
+
     if not new_tournament_data.invitation_link:
         invite_code = str(uuid.uuid4())
         new_tournament_data.invitation_link = f"/join/{invite_code}"
@@ -232,16 +239,23 @@ async def remove_participant_from_tournament(
             detail="Cannot remove participants after the tournament has started.",
         )
 
-    original_participant_count = len(tournament.participants)
-    tournament.participants = [
-        p for p in tournament.participants if p.id != participant_id
-    ]
+    participant_to_remove = next((p for p in tournament.participants if p.id == participant_id), None)
 
-    if len(tournament.participants) == original_participant_count:
+    if not participant_to_remove:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Participant not found in this tournament",
         )
+
+    if participant_to_remove.email == current_user.email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The tournament creator cannot be removed from the participants list.",
+        )
+
+    tournament.participants = [
+        p for p in tournament.participants if p.id != participant_id
+    ]
 
     update_tournament_db(tournament_id, tournament.model_dump())
     return

@@ -38,6 +38,12 @@ function JoinTournamentPage({ currentUser, globalSetError, globalSetIsLoading, g
 
 
   useEffect(() => {
+    // Since this is a protected route, currentUser should be available.
+    // If not, we wait until it is.
+    if (!currentUser) {
+      return;
+    }
+
     const processInvite = async () => {
       if (!inviteCode) return;
 
@@ -55,17 +61,12 @@ function JoinTournamentPage({ currentUser, globalSetError, globalSetIsLoading, g
           return;
         }
 
-        if (currentUser) {
-          const isParticipant = tourney.participants.some(p => p.id === currentUser.id);
-          if (isParticipant) {
-            setJoinMessage("You are already in this tournament. Redirecting...");
-            navigate(`/tournaments/${tourney.id}`);
-          } else {
-            await handleJoinTournament(tourney);
-          }
+        const isParticipant = tourney.participants.some(p => p.id === currentUser.id);
+        if (isParticipant) {
+          setJoinMessage("You are already in this tournament. Redirecting...");
+          navigate(`/tournaments/${tourney.id}`);
         } else {
-          localStorage.setItem('postLoginRedirect', `/join/${inviteCode}`);
-          navigate('/register');
+          await handleJoinTournament(tourney);
         }
       } catch (err) {
         globalSetError(err.message || 'Failed to process invitation. The link may be invalid or expired.');

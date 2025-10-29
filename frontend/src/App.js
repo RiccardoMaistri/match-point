@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import './App.css';
-import TournamentList from './components/TournamentList';
 import TournamentForm from './components/TournamentForm';
 import TournamentDetail from './components/TournamentDetail';
 import LoginPage from './components/LoginPage';
@@ -48,12 +47,15 @@ function App() {
           localStorage.removeItem('authToken');
           setCurrentUser(null);
           console.log("App.js: Token invalid, currentUser set to null.");
+        } finally {
+          setIsInitializing(false);
+          console.log("App.js: Initialization complete. isInitializing set to false.");
         }
       } else {
         console.log("App.js: No auth token found, currentUser remains null.");
+        setIsInitializing(false);
+        console.log("App.js: Initialization complete. isInitializing set to false.");
       }
-      setIsInitializing(false);
-      console.log("App.js: Initialization complete. isInitializing set to false.");
     };
     verifyTokenAndFetchUser();
   }, []);
@@ -97,13 +99,6 @@ function App() {
     } finally {
       setIsAuthLoading(false);
     }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('postLoginRedirect');
-    setCurrentUser(null);
-    navigate('/login');
   };
 
   const fetchTournaments = useCallback(async () => {
@@ -157,14 +152,6 @@ function App() {
     }
   };
 
-  const handleEditTournamentClick = (tournamentId) => {
-    const tournamentToEdit = tournaments.find(t => t.id === tournamentId);
-    if (tournamentToEdit) {
-      setEditingTournament(tournamentToEdit);
-      setShowCreateForm(true);
-    }
-  };
-
   const handleUpdateTournamentSubmit = async (tournamentData) => {
     if (!editingTournament || !editingTournament.id) return;
     setAppIsLoading(true);
@@ -183,27 +170,6 @@ function App() {
     } finally {
       setAppIsLoading(false);
     }
-  };
-
-  const handleDeleteTournament = async (tournamentId) => {
-    setConfirmModal({
-      isOpen: true,
-      title: 'Delete Tournament',
-      message: 'Are you sure you want to delete this tournament? This action cannot be undone.',
-      onConfirm: async () => {
-        setAppIsLoading(true);
-        setAppError(null);
-        try {
-          await api.deleteTournament(tournamentId);
-          await fetchTournaments();
-        } catch (err) {
-          setAppError(err.message || 'Failed to delete tournament');
-        } finally {
-          setAppIsLoading(false);
-        }
-        setConfirmModal({ isOpen: false });
-      }
-    });
   };
 
   const ProtectedRoute = ({ children }) => {
@@ -306,13 +272,7 @@ function App() {
             } />
             <Route path="/join/:inviteCode" element={
               <ProtectedRoute>
-                <JoinTournamentPage
-                  currentUser={currentUser}
-                  globalSetError={setAppError}
-                  globalSetIsLoading={setAppIsLoading}
-                  globalIsLoading={appIsLoading}
-                  onLoginRequired={() => navigate('/login')}
-                />
+                <JoinTournamentPage currentUser={currentUser} globalSetIsLoading={setAppIsLoading} globalIsLoading={appIsLoading} globalSetError={setAppError} />
               </ProtectedRoute>
             } />
              <Route path="/" element={

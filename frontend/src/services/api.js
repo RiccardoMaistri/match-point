@@ -152,7 +152,7 @@ export const getTournamentSchedule = async (tournamentId) => {
 // --- Invitation Link Endpoints ---
 export const getTournamentByInviteCode = async (inviteCode) => {
   // This is a public endpoint
-  const response = await fetch(`${API_BASE_URL}/tournament-by-invite/${inviteCode}`);
+  const response = await fetch(`${API_BASE_URL}/tournaments/by-invite/${inviteCode}`);
   return handleResponse(response);
 };
 

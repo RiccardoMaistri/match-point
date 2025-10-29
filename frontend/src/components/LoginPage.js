@@ -72,7 +72,7 @@ const LoginPage = ({ onLogin, error, isLoading }) => {
         </form>
 
         <p className="text-center text-sm text-secondary-text mt-8">
-          Don't have an account? <Link to="/register" className="font-medium text-primary hover:text-primary-hover">Register here</Link>.
+          Don't have an account? <Link to="/register" className="font-medium text-primary hover:text-primary-hover">Register</Link>.
         </p>
       </div>
     </div>
