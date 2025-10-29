@@ -12,6 +12,7 @@ from database_adapter import (
 )
 from models import (
     Match,
+    MatchResult,
     Participant,
     Tournament,
     TournamentCreate,
@@ -403,10 +404,7 @@ async def get_tournament_matches(
 async def record_match_result(
     tournament_id: str = Path(..., description="ID del torneo"),
     match_id: str = Path(..., description="ID del match"),
-    score_participant1_set1: Optional[int] = Body(None, embed=True),
-    score_participant2_set1: Optional[int] = Body(None, embed=True),
-    score_participant1_set2: Optional[int] = Body(None, embed=True),
-    score_participant2_set2: Optional[int] = Body(None, embed=True),
+    result_data: MatchResult = Body(...),
     current_user: User = Depends(get_current_active_user),
 ):
     tournament_dict = get_tournament_db(tournament_id)
@@ -458,32 +456,35 @@ async def record_match_result(
             detail="You are not authorized to record results for this match.",
         )
 
-    if score_participant1_set1 is not None:
-        match_to_update.set1_score_participant1 = score_participant1_set1
-    if score_participant2_set1 is not None:
-        match_to_update.set1_score_participant2 = score_participant2_set1
-    if score_participant1_set2 is not None:
-        match_to_update.set2_score_participant1 = score_participant1_set2
-    if score_participant2_set2 is not None:
-        match_to_update.set2_score_participant2 = score_participant2_set2
+    # Update scores from the payload
+    match_to_update.set1_score_participant1 = result_data.set1_score_participant1
+    match_to_update.set1_score_participant2 = result_data.set1_score_participant2
+    match_to_update.set2_score_participant1 = result_data.set2_score_participant1
+    match_to_update.set2_score_participant2 = result_data.set2_score_participant2
+    match_to_update.set3_score_participant1 = result_data.set3_score_participant1
+    match_to_update.set3_score_participant2 = result_data.set3_score_participant2
 
-    score1 = (score_participant1_set1 or 0) + (score_participant1_set2 or 0)
-    score2 = (score_participant2_set1 or 0) + (score_participant2_set2 or 0)
+    # Calculate total scores
+    score1 = (result_data.set1_score_participant1 or 0) + (result_data.set2_score_participant1 or 0) + (result_data.set3_score_participant1 or 0)
+    score2 = (result_data.set1_score_participant2 or 0) + (result_data.set2_score_participant2 or 0) + (result_data.set3_score_participant2 or 0)
     match_to_update.score_participant1 = score1
     match_to_update.score_participant2 = score2
 
-    if score1 is not None and score2 is not None:
-        if score1 > score2:
-            match_to_update.winner_id = match_to_update.participant1_id
-        elif score2 > score1:
-            match_to_update.winner_id = match_to_update.participant2_id
-        else:
-            pass
+    # Determine winner
+    if score1 > score2:
+        match_to_update.winner_id = match_to_update.participant1_id
+    elif score2 > score1:
+        match_to_update.winner_id = match_to_update.participant2_id
+    else:
+        match_to_update.winner_id = None # Handle draws if necessary
 
+    # Update match status
     if match_to_update.winner_id:
         match_to_update.status = "completed"
-    elif score1 is not None or score2 is not None:
+    elif score1 > 0 or score2 > 0:
         match_to_update.status = "in_progress"
+    else:
+        match_to_update.status = "pending"
 
     tournament.matches[match_index] = match_to_update
 
@@ -503,30 +504,19 @@ async def record_match_result(
             sorted_round_matches = sorted(current_round_matches, key=lambda m: m.match_number)
             winners = [m.winner_id for m in sorted_round_matches if m.winner_id]
             
-            if len(winners) == 1:
-                if any(not m.is_bye for m in current_round_matches):
-                    tournament.status = "completed"
-
+            if len(winners) == 1 and not any(m.is_bye for m in current_round_matches):
+                tournament.status = "completed"
             elif len(winners) > 1:
-                next_round = current_round + 1
-                next_round_matches_exist = any(m.round_number == next_round for m in playoff_matches)
+                next_round_number = current_round + 1
+                next_round_matches = [m for m in playoff_matches if m.round_number == next_round_number]
                 
-                if not next_round_matches_exist:
-                    match_num = max((m.match_number for m in tournament.matches), default=0) + 1
-                    
-                    paired_winners = list(winners)
-                    while len(paired_winners) >= 2:
-                        p1_id = paired_winners.pop(0)
-                        p2_id = paired_winners.pop(-1)
-                        new_match = Match(
-                            participant1_id=p1_id,
-                            participant2_id=p2_id,
-                            match_number=match_num,
-                            round_number=next_round,
-                            phase='playoff',
-                        )
-                        tournament.matches.append(new_match)
-                        match_num += 1
+                # Logic to fill in the next round's matches
+                winner_iter = iter(winners)
+                for match in sorted(next_round_matches, key=lambda m: m.match_number):
+                    if not match.participant1_id:
+                        match.participant1_id = next(winner_iter, None)
+                    if not match.participant2_id:
+                        match.participant2_id = next(winner_iter, None)
 
     update_tournament_db(tournament_id, tournament.model_dump())
     return match_to_update

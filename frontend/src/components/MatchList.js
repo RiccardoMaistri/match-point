@@ -54,7 +54,7 @@ function MatchList({ matches, participants, onRecordResult, tournamentId, tourna
                         </>
                     }
                   </p>
-                  
+
                   {/* Match Meta */}
                   <div className="text-xs text-secondary-text mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
                     <span className={`inline-block px-2.5 py-0.5 rounded-full font-medium capitalize ${getStatusClass(match.status)}`}>
