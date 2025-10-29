@@ -31,9 +31,20 @@ class Match(BaseModel):
     set1_score_participant2: Optional[int] = None
     set2_score_participant1: Optional[int] = None
     set2_score_participant2: Optional[int] = None
+    set3_score_participant1: Optional[int] = None
+    set3_score_participant2: Optional[int] = None
     winner_partecipant: Optional[int] = None
     is_bye: bool = False
     status: Literal['pending', 'in_progress', 'completed', 'cancelled'] = 'pending'
+
+
+class MatchResult(BaseModel):
+    set1_score_participant1: Optional[int] = None
+    set1_score_participant2: Optional[int] = None
+    set2_score_participant1: Optional[int] = None
+    set2_score_participant2: Optional[int] = None
+    set3_score_participant1: Optional[int] = None
+    set3_score_participant2: Optional[int] = None
 
 
 class User(BaseModel):
