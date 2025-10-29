@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import './App.css';
-import TournamentList from './components/TournamentList';
 import TournamentForm from './components/TournamentForm';
 import TournamentDetail from './components/TournamentDetail';
 import LoginPage from './components/LoginPage';
@@ -48,12 +47,15 @@ function App() {
           localStorage.removeItem('authToken');
           setCurrentUser(null);
           console.log("App.js: Token invalid, currentUser set to null.");
+        } finally {
+          setIsInitializing(false);
+          console.log("App.js: Initialization complete. isInitializing set to false.");
         }
       } else {
         console.log("App.js: No auth token found, currentUser remains null.");
+        setIsInitializing(false);
+        console.log("App.js: Initialization complete. isInitializing set to false.");
       }
-      setIsInitializing(false);
-      console.log("App.js: Initialization complete. isInitializing set to false.");
     };
     verifyTokenAndFetchUser();
   }, []);
@@ -99,13 +101,6 @@ function App() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('postLoginRedirect');
-    setCurrentUser(null);
-    navigate('/login');
-  };
-
   const fetchTournaments = useCallback(async () => {
     setAppIsLoading(true);
     setAppError(null);
@@ -142,21 +137,18 @@ function App() {
     setAppIsLoading(true);
     setAppError(null);
     try {
-      await api.createTournament(tournamentData);
-      await fetchTournaments();
+      const newTournament = await api.createTournament(tournamentData);
+      setTournaments(prev => [newTournament, ...prev].sort((a, b) => {
+        const dateA = new Date(a.start_date || 0);
+        const dateB = new Date(b.start_date || 0);
+        return dateB - dateA;
+      }));
       setShowCreateForm(false);
+      navigate(`/tournaments/${newTournament.id}`); // Redirect to the new tournament
     } catch (err) {
       setAppError(err.message || 'Failed to create tournament');
     } finally {
       setAppIsLoading(false);
-    }
-  };
-
-  const handleEditTournamentClick = (tournamentId) => {
-    const tournamentToEdit = tournaments.find(t => t.id === tournamentId);
-    if (tournamentToEdit) {
-      setEditingTournament(tournamentToEdit);
-      setShowCreateForm(true);
     }
   };
 
@@ -165,8 +157,12 @@ function App() {
     setAppIsLoading(true);
     setAppError(null);
     try {
-      await api.updateTournament(editingTournament.id, tournamentData);
-      await fetchTournaments();
+      const updatedTournament = await api.updateTournament(editingTournament.id, tournamentData);
+      setTournaments(prev => prev.map(t => t.id === updatedTournament.id ? updatedTournament : t).sort((a, b) => {
+        const dateA = new Date(a.start_date || 0);
+        const dateB = new Date(b.start_date || 0);
+        return dateB - dateA;
+      }));
       setShowCreateForm(false);
       setEditingTournament(null);
     } catch (err) {
@@ -174,27 +170,6 @@ function App() {
     } finally {
       setAppIsLoading(false);
     }
-  };
-
-  const handleDeleteTournament = async (tournamentId) => {
-    setConfirmModal({
-      isOpen: true,
-      title: 'Delete Tournament',
-      message: 'Are you sure you want to delete this tournament? This action cannot be undone.',
-      onConfirm: async () => {
-        setAppIsLoading(true);
-        setAppError(null);
-        try {
-          await api.deleteTournament(tournamentId);
-          await fetchTournaments();
-        } catch (err) {
-          setAppError(err.message || 'Failed to delete tournament');
-        } finally {
-          setAppIsLoading(false);
-        }
-        setConfirmModal({ isOpen: false });
-      }
-    });
   };
 
   const ProtectedRoute = ({ children }) => {
@@ -296,13 +271,9 @@ function App() {
               </AuthRoute>
             } />
             <Route path="/join/:inviteCode" element={
-              <JoinTournamentPage
-                currentUser={currentUser}
-                globalSetError={setAppError}
-                globalSetIsLoading={setAppIsLoading}
-                globalIsLoading={appIsLoading}
-                onLoginRequired={() => navigate('/login')}
-              />
+              <ProtectedRoute>
+                <JoinTournamentPage currentUser={currentUser} globalSetIsLoading={setAppIsLoading} globalIsLoading={appIsLoading} globalSetError={setAppError} />
+              </ProtectedRoute>
             } />
              <Route path="/" element={
               <ProtectedRoute>
