@@ -13,16 +13,16 @@ const LoginPage = ({ onLogin, error, isLoading }) => {
     onLogin(usernameOrEmail, password);
   };
 
-  const inputClasses = "mt-1 block w-full px-4 py-3 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary sm:text-sm";
+  const inputClasses = "mt-1 block w-full px-4 py-3 bg-white border border-gray-300 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary sm:text-sm";
   const labelClasses = "block text-sm font-medium text-primary-text";
 
   return (
     <div className="max-w-md mx-auto mt-8 sm:mt-12 p-4">
-      <div className="bg-background p-6 sm:p-8 rounded-xl shadow-lg">
+      <div className="bg-background p-6 sm:p-8 rounded-3xl shadow-lg">
         <h2 className="text-3xl font-bold text-center text-primary-text mb-6">Login</h2>
         
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-6" role="alert">
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-2xl relative mb-6" role="alert">
             <span className="block sm:inline">{error}</span>
           </div>
         )}
@@ -63,7 +63,7 @@ const LoginPage = ({ onLogin, error, isLoading }) => {
           <div className="space-y-4 pt-2">
             <button
               type="submit"
-              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-primary hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:bg-opacity-50 transition-colors"
+              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-2xl shadow-sm text-sm font-semibold text-white bg-primary hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:bg-opacity-50 transition-colors"
               disabled={isLoading}
             >
               {isLoading ? 'Logging in...' : 'Login'}

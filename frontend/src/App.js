@@ -233,9 +233,8 @@ function App() {
   };
 
   return (
-    <div className="relative flex size-full min-h-screen flex-col justify-between group/design-root overflow-x-hidden bg-background">
-      <div className="flex-grow">
-        <Header 
+    <div className="relative flex size-full min-h-screen flex-col justify-between group/design-root overflow-x-hidden bg-background-light dark:bg-background-dark">
+      <Header 
           title="MatchPoint" 
           tournaments={currentUser ? tournaments : null}
           currentTournamentId={currentTournamentId}
@@ -252,7 +251,7 @@ function App() {
             }}
           />
         )}
-        <main className="pb-24">
+        <main className="pt-20 pb-20 flex-grow">
           {appError && (
             <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-md shadow-md" role="alert">
               <p className="font-bold">Error</p>
@@ -318,7 +317,6 @@ function App() {
             } />
           </Routes>
         </main>
-      </div>
       {currentUser && <BottomNav />}
       <InstallPrompt />
       <ConfirmModal

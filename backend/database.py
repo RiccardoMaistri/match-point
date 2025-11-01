@@ -174,10 +174,14 @@ def record_match_result_db(tournament_id: str, match_id: str, winner_id: str) ->
 
 
 # --- Inizializzazione (opzionale, per assicurarsi che i file esistano) ---
+FEEDBACK_FILE = os.path.join(DATA_DIR, "feedback.json")
+
 def initialize_database_files():
     _ensure_data_dir_exists()
     if not os.path.exists(TOURNAMENTS_FILE):
         _save_data(TOURNAMENTS_FILE, [])
+    if not os.path.exists(FEEDBACK_FILE):
+        _save_data(FEEDBACK_FILE, [])
     # if not os.path.exists(PARTICIPANTS_FILE):
     #     _save_data(PARTICIPANTS_FILE, [])
     # if not os.path.exists(MATCHES_FILE):
@@ -283,6 +287,15 @@ def update_user_db(user_id: str, user_update_data: Dict[str, Any]) -> Optional[D
         return updated_user
     return None  # User not found
 
+
+def save_feedback_db(feedback_data: Dict[str, Any]) -> Dict[str, Any]:
+    feedback_list = _load_data(FEEDBACK_FILE)
+    feedback_list.append(feedback_data)
+    _save_data(FEEDBACK_FILE, feedback_list)
+    return feedback_data
+
+def get_all_feedback_db() -> List[Dict[str, Any]]:
+    return _load_data(FEEDBACK_FILE)
 
 # Ensure users.json is initialized
 if not os.path.exists(USERS_FILE):

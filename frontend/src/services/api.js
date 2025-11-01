@@ -196,4 +196,8 @@ export const getCurrentUserDetails = async () => {
 };
 
 
+export const submitFeedback = async (feedbackText) => {
+  return authenticatedFetch(`${API_BASE_URL}/feedback/`, 'POST', { feedback: feedbackText });
+};
+
 export { API_BASE_URL };

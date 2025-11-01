@@ -5,7 +5,7 @@ load_dotenv()
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import tournaments, users
+from routers import tournaments, users, feedback
 
 app = FastAPI(
     title="Tournament Manager API",
@@ -38,6 +38,7 @@ app.add_middleware(
 
 app.include_router(tournaments.router, prefix="/api/tournaments", tags=["tournaments"])
 app.include_router(users.router, prefix="/api/users", tags=["users"])
+app.include_router(feedback.router, prefix="/api/feedback", tags=["feedback"])
 
 @app.get("/")
 def read_root():

@@ -86,7 +86,7 @@ const TournamentDetailPage = ({ currentUser }) => {
           ) : (
             <ul className="space-y-2">
               {participants.map(participant => (
-                <li key={participant.id} className="bg-gray-800 p-3 rounded-lg">
+                <li key={participant.id} className="bg-gray-800 p-3 rounded-2xl">
                   <p className="text-white font-medium">{participant.name}</p>
                   <p className="text-gray-400 text-sm">{participant.email}</p>
                   {participant.ranking && (
@@ -110,9 +110,9 @@ const TournamentDetailPage = ({ currentUser }) => {
             </h2>
           )}
           <div className="flex w-full grow bg-gray-900 p-4">
-            <div className="w-full gap-1 overflow-hidden bg-gray-900 rounded-xl flex flex-col">
+            <div className="w-full gap-1 overflow-hidden bg-gray-900 rounded-3xl flex flex-col">
               {matches.length === 0 ? (
-                <div className="flex items-center justify-center w-full bg-gray-800 rounded-lg h-40">
+                <div className="flex items-center justify-center w-full bg-gray-800 rounded-2xl h-40">
                   <p className="text-gray-400">No matches available.</p>
                 </div>
               ) : (
@@ -126,7 +126,7 @@ const TournamentDetailPage = ({ currentUser }) => {
                       onRecordResult={(tournamentId, matchId) => handleOpenRecordModal(matchId)}
                     />
                   ) : (
-                    <div className="bg-gray-800 rounded-lg">
+                    <div className="bg-gray-800 rounded-2xl">
                       <div 
                         className="flex justify-between items-center p-4 cursor-pointer"
                         onClick={() => setGroupStageVisible(!isGroupStageVisible)}
@@ -147,7 +147,7 @@ const TournamentDetailPage = ({ currentUser }) => {
                                     e.stopPropagation();
                                     setSelectedMatchday(i + 1);
                                   }}
-                                  className={`px-3 py-1 text-sm font-semibold rounded-lg ${selectedMatchday === i + 1 ? 'bg-primary text-white' : 'bg-gray-700 text-gray-300'}`}
+                                  className={`px-3 py-1 text-sm font-semibold rounded-2xl ${selectedMatchday === i + 1 ? 'bg-primary text-white' : 'bg-gray-700 text-gray-300'}`}
                                 >
                                   Day {i + 1}
                                 </button>

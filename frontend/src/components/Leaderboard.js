@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 
-const Leaderboard = ({ participants, matches }) => {
+const Leaderboard = ({ participants, matches, playoffParticipants = 4 }) => {
   const leaderboardData = useMemo(() => {
     if (!participants || !matches) {
       return [];
@@ -14,49 +14,83 @@ const Leaderboard = ({ participants, matches }) => {
       const wins = playedMatches.filter(m => m.winner_id === participant.id).length;
       const losses = playedMatches.length - wins;
 
+      let scoreFor = 0;
+      let scoreAgainst = 0;
+      playedMatches.forEach(m => {
+        const isP1 = m.participant1_id === participant.id;
+        const p1Score = (m.set1_score_participant1 || 0) + (m.set2_score_participant1 || 0) + (m.set3_score_participant1 || 0);
+        const p2Score = (m.set1_score_participant2 || 0) + (m.set2_score_participant2 || 0) + (m.set3_score_participant2 || 0);
+        if (isP1) {
+          scoreFor += p1Score;
+          scoreAgainst += p2Score;
+        } else {
+          scoreFor += p2Score;
+          scoreAgainst += p1Score;
+        }
+      });
+
       return {
         id: participant.id,
         name: participant.name,
         played: playedMatches.length,
         wins,
         losses,
+        scoreFor,
+        scoreAgainst,
+        scoreDiff: scoreFor - scoreAgainst,
       };
     });
 
-    // Sort by wins (descending)
     stats.sort((a, b) => b.wins - a.wins);
-
     return stats;
   }, [participants, matches]);
 
   if (leaderboardData.length === 0) {
-    return <p className="text-xs text-secondary-text py-2 text-center">No completed matches to build a leaderboard yet.</p>;
+    return <p className="text-xs text-slate-500 dark:text-slate-400 py-2 text-center">No completed matches yet.</p>;
   }
 
   return (
-    <div className="overflow-x-auto rounded border border-accent">
-      <table className="min-w-full divide-y divide-accent">
-        <thead className="bg-card-background">
-          <tr>
-            <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-secondary-text uppercase tracking-wider">Rank</th>
-            <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-secondary-text uppercase tracking-wider">Name</th>
-            <th scope="col" className="px-3 py-2 text-center text-xs font-bold text-secondary-text uppercase tracking-wider">P</th>
-            <th scope="col" className="px-3 py-2 text-center text-xs font-bold text-secondary-text uppercase tracking-wider">W</th>
-            <th scope="col" className="px-3 py-2 text-center text-xs font-bold text-secondary-text uppercase tracking-wider">L</th>
-          </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-accent">
-          {leaderboardData.map((player, index) => (
-            <tr key={player.id} className="hover:bg-card-background transition-colors">
-              <td className="px-3 py-2 whitespace-nowrap text-xs font-medium text-primary-text">{index + 1}</td>
-              <td className="px-3 py-2 whitespace-nowrap text-xs font-semibold text-primary-text">{player.name}</td>
-              <td className="px-3 py-2 whitespace-nowrap text-xs text-center text-secondary-text">{player.played}</td>
-              <td className="px-3 py-2 whitespace-nowrap text-xs text-center font-bold text-green-600">{player.wins}</td>
-              <td className="px-3 py-2 whitespace-nowrap text-xs text-center text-red-600">{player.losses}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="bg-white dark:bg-surface-dark rounded-3xl shadow-sm overflow-hidden">
+      <div className="p-4 space-y-3">
+        {leaderboardData.map((player, index) => {
+          const isQualified = index < playoffParticipants;
+          return (
+            <div key={player.id} className="flex items-center justify-between">
+              <div className="flex items-center gap-3 flex-1">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
+                  isQualified 
+                    ? 'bg-primary/10 text-primary dark:bg-primary/20' 
+                    : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
+                }`}>
+                  {index + 1}
+                </div>
+                <div className="flex-1">
+                  <span className={`font-semibold block ${
+                    isQualified 
+                      ? 'text-slate-900 dark:text-slate-50' 
+                      : 'text-slate-600 dark:text-slate-400'
+                  }`}>
+                    {player.name}
+                  </span>
+                  <div className="flex gap-3 text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    <span>P: {player.played}</span>
+                    <span>L: <span className="font-medium">{player.losses}</span></span>
+                    <span>Diff: <span className={`${player.scoreDiff >= 0 ? 'text-green-600 dark:text-green-500' : 'text-red-600 dark:text-red-500'} font-medium`}>{player.scoreDiff >= 0 ? `+${player.scoreDiff}` : player.scoreDiff}</span></span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-col items-center">
+                <span className="font-bold text-2xl text-primary">{player.wins}</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">WINS</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="border-t border-gray-200 dark:border-border-dark p-3 bg-green-50/50 dark:bg-green-900/20 rounded-b-xl flex items-center justify-center gap-2 text-sm">
+        <span className="material-symbols-outlined text-green-600 dark:text-green-400 text-base">emoji_events</span>
+        <span className="font-medium text-green-800 dark:text-green-300">Top {playoffParticipants} advance to playoffs</span>
+      </div>
     </div>
   );
 };

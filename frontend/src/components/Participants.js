@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import * as api from '../services/api';
 import ConfirmModal from './ConfirmModal';
 
 function Participants({ currentUser }) {
   const { tournamentId } = useParams();
-  const navigate = useNavigate();
   const [tournament, setTournament] = useState(null);
   const [participants, setParticipants] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -31,11 +30,7 @@ function Participants({ currentUser }) {
   }, [tournamentId]);
 
   const handleInvite = async () => {
-    if (!tournament?.invitation_link) {
-        console.error("No invitation link found for this tournament.");
-        return;
-    }
-
+    if (!tournament?.invitation_link) return;
     const inviteLink = `${window.location.origin}${tournament.invitation_link}`;
 
     if (navigator.share && window.isSecureContext) {
@@ -46,9 +41,7 @@ function Participants({ currentUser }) {
           url: inviteLink,
         });
       } catch (error) {
-        if (error.name !== 'AbortError') {
-          console.error('Share API failed:', error);
-        }
+        if (error.name !== 'AbortError') console.error('Share API failed:', error);
       }
     } else if (navigator.clipboard?.writeText && window.isSecureContext) {
       try {
@@ -72,7 +65,7 @@ function Participants({ currentUser }) {
       onConfirm: async () => {
         try {
           await api.removeParticipantFromTournament(tournamentId, participantId);
-          setParticipants(prevParticipants => prevParticipants.filter(p => p.id !== participantId));
+          setParticipants(prev => prev.filter(p => p.id !== participantId));
         } catch (err) {
           setError(err.message || 'Failed to remove participant');
         }
@@ -81,54 +74,72 @@ function Participants({ currentUser }) {
     });
   };
 
-  if (isLoading) return <p className="text-center py-10 text-subtext-light dark:text-subtext-dark">Loading...</p>;
+  if (isLoading) return <p className="text-center py-10 text-slate-500 dark:text-slate-400">Loading...</p>;
   if (error) return <p className="text-center py-10 text-red-500">{error}</p>;
-  if (!tournament) return <p className="text-center py-10 text-subtext-light dark:text-subtext-dark">Tournament not found.</p>;
+  if (!tournament) return <p className="text-center py-10 text-slate-500 dark:text-slate-400">Tournament not found.</p>;
 
   const isOwner = currentUser && tournament.user_id === currentUser.id;
-  const canManageParticipants = tournament.registration_open;
 
   return (
-    <div className="max-w-md mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-24">
-      <div className="space-y-4">
-        <div className="bg-card-light dark:bg-card-dark rounded-lg shadow-md overflow-hidden">
-            <div className="p-4">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-bold text-text-light dark:text-text-dark">Participants ({participants.length})</h3>
-                    {isOwner && canManageParticipants && (
-                        <button 
-                        onClick={handleInvite}
-                        className="px-4 py-2 text-sm font-semibold text-white bg-primary rounded-lg hover:bg-indigo-700 transition-colors shadow-lg"
-                        >
-                        Invite
-                        </button>
-                    )}
+    <div className="fixed top-[44px] left-0 right-0 bottom-[72px] flex flex-col">
+      <div className="px-4 pt-3 pb-3">
+        <div className="px-2 flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">Players</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400">{participants.length} participants</p>
+          </div>
+          {isOwner && tournament.registration_open && (
+            <button 
+              onClick={handleInvite}
+              className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-primary rounded-full hover:bg-indigo-700 transition-colors shadow-md"
+            >
+              <span className="material-symbols-outlined text-base">share</span>
+              <span>Invite</span>
+            </button>
+          )}
+        </div>
+        {copyMessage && (
+          <div className="mt-3 px-2">
+            <p className="text-sm text-green-600 dark:text-green-400">{copyMessage}</p>
+          </div>
+        )}
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-4">
+        <div className="pb-6">
+      {participants.length === 0 ? (
+        <div className="bg-white dark:bg-surface-dark rounded-3xl shadow-sm p-8 text-center">
+          <span className="material-symbols-outlined text-slate-400 dark:text-slate-500 text-5xl mb-3">group_off</span>
+          <p className="text-slate-500 dark:text-slate-400">No participants yet</p>
+        </div>
+      ) : (
+        <div className="bg-white dark:bg-surface-dark rounded-3xl shadow-sm overflow-hidden">
+          <div className="divide-y divide-gray-200 dark:divide-border-dark">
+            {participants.map((participant) => (
+              <div key={participant.id} className="flex items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center flex-shrink-0">
+                    <span className="material-symbols-outlined text-primary text-xl">person</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-slate-900 dark:text-slate-50 truncate">{participant.name}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 truncate">{participant.email}</p>
+                  </div>
                 </div>
-                {copyMessage && <p className="text-sm text-primary dark:text-primary mb-4">{copyMessage}</p>}
-                {participants.length === 0 ? (
-                <p className="text-sm text-subtext-light dark:text-subtext-dark py-8 text-center">No participants yet.</p>
-                ) : (
-                <div className="space-y-3">
-                    {participants.map((participant, index) => (
-                    <div key={participant.id} className={`flex justify-between items-center p-3 rounded-lg ${index % 2 === 0 ? 'bg-gray-50 dark:bg-gray-800/50' : ''}`}>
-                        <div className="flex-grow min-w-0">
-                        <p className="font-semibold text-text-light dark:text-text-dark truncate">{participant.name}</p>
-                        <p className="text-sm text-subtext-light dark:text-subtext-dark truncate">{participant.email}</p>
-                        </div>
-                        {isOwner && (
-                        <button
-                            onClick={() => handleRemoveParticipant(participant.id)}
-                            className="ml-3 w-8 h-8 flex items-center justify-center text-red-500 hover:bg-red-100 dark:hover:bg-red-500/10 rounded-full transition-colors flex-shrink-0"
-                            title="Remove participant"
-                        >
-                            <span className="material-symbols-outlined text-base">delete</span>
-                        </button>
-                        )}
-                    </div>
-                    ))}
-                </div>
+                {isOwner && (
+                  <button
+                    onClick={() => handleRemoveParticipant(participant.id)}
+                    className="ml-3 w-8 h-8 flex items-center justify-center text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-full transition-colors flex-shrink-0"
+                    title="Remove participant"
+                  >
+                    <span className="material-symbols-outlined text-base">delete</span>
+                  </button>
                 )}
-            </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
         </div>
       </div>
 

@@ -3,8 +3,6 @@ import { NavLink, useLocation } from 'react-router-dom';
 
 const BottomNav = () => {
   const location = useLocation();
-  const navLinkClasses = "flex flex-col items-center justify-center gap-1 text-secondary-text hover:text-primary transition-all duration-200 h-full rounded-lg";
-  const activeLinkClasses = "!text-primary bg-blue-50 border border-blue-200";
 
   const getCurrentTournamentId = () => {
     const pathParts = location.pathname.split('/');
@@ -21,36 +19,22 @@ const BottomNav = () => {
   const tournamentPath = currentTournamentId ? `/tournaments/${currentTournamentId}` : '/';
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 border-t border-gray-200 bg-background shadow-[0_-2px_8px_rgba(0,0,0,0.06)]">
-      <div className="flex justify-around items-center h-14 px-2">
-        <NavLink to={tournamentPath} className={({ isActive }) => `${navLinkClasses} ${isActive ? activeLinkClasses : ''} flex-1`}>
-          <div className="flex h-6 w-6 items-center justify-center">
-            <svg fill="currentColor" height="20px" viewBox="0 0 256 256" width="20px" xmlns="http://www.w3.org/2000/svg">
-              <path d="M201.57,54.46a104,104,0,1,0,0,147.08A103.4,103.4,0,0,0,201.57,54.46ZM65.75,65.77a87.63,87.63,0,0,1,53.66-25.31A87.31,87.31,0,0,1,94,94.06a87.42,87.42,0,0,1-53.62,25.35A87.58,87.58,0,0,1,65.75,65.77ZM40.33,135.48a103.29,103.29,0,0,0,65-30.11,103.24,103.24,0,0,0,30.13-65,87.78,87.78,0,0,1,80.18,80.14,104,104,0,0,0-95.16,95.1,87.78,87.78,0,0,1-80.18-80.14Zm149.92,54.75a87.69,87.69,0,0,1-53.66,25.31,88,88,0,0,1,79-78.95A87.58,87.58,0,0,1,190.25,190.23Z"></path>
-            </svg>
-          </div>
-          <span className="text-[10px] font-semibold">Matches</span>
+    <footer className="sticky bottom-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-t border-border-light dark:border-border-dark">
+      <nav className="flex justify-around p-2">
+        <NavLink to={tournamentPath} className={({ isActive }) => `flex flex-col items-center justify-center space-y-1 w-1/3 py-2 ${isActive ? 'bg-primary-light dark:bg-primary/20 rounded-2xl' : ''}`}>
+          <span className={`material-symbols-outlined ${location.pathname.startsWith('/tournaments') ? 'text-primary dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400'}`}>sports_tennis</span>
+          <span className={`text-xs ${location.pathname.startsWith('/tournaments') ? 'font-semibold text-primary dark:text-indigo-400' : 'font-medium text-slate-500 dark:text-slate-400'}`}>Matches</span>
         </NavLink>
-
-        <NavLink to={standingsPath} className={({ isActive }) => `${navLinkClasses} ${isActive ? activeLinkClasses : ''} flex-1`}>
-          <div className="flex h-6 w-6 items-center justify-center">
-            <svg fill="currentColor" height="20px" viewBox="0 0 256 256" width="20px" xmlns="http://www.w3.org/2000/svg">
-              <path d="M96,128H40a8,8,0,0,0-8,8v64a8,8,0,0,0,8,8H96a8,8,0,0,0,8-8v-64A8,8,0,0,0,96,128Zm-8,64H48V144h40Z M176,96h-56a8,8,0,0,0-8,8v96a8,8,0,0,0,8,8h56a8,8,0,0,0,8-8V104A8,8,0,0,0,176,96Zm-8,96h-40V112h40Z M224,160h-24a8,8,0,0,0-8,8v32a8,8,0,0,0,8,8h24a8,8,0,0,0,8-8v-32A8,8,0,0,0,224,160Zm-8,32h-8v-16h8Z"/>
-            </svg>
-          </div>
-          <span className="text-[10px] font-semibold">Standings</span>
+        <NavLink to={standingsPath} className={({ isActive }) => `flex flex-col items-center justify-center space-y-1 w-1/3 py-2 ${isActive ? 'bg-primary-light dark:bg-primary/20 rounded-2xl' : ''}`}>
+          <span className={`material-symbols-outlined ${location.pathname.startsWith('/standings') ? 'text-primary dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400'}`}>leaderboard</span>
+          <span className={`text-xs ${location.pathname.startsWith('/standings') ? 'font-semibold text-primary dark:text-indigo-400' : 'font-medium text-slate-500 dark:text-slate-400'}`}>Standings</span>
         </NavLink>
-
-        <NavLink to={participantsPath} className={({ isActive }) => `${navLinkClasses} ${isActive ? activeLinkClasses : ''} flex-1`}>
-          <div className="flex h-6 w-6 items-center justify-center">
-            <svg fill="currentColor" height="20px" viewBox="0 0 256 256" width="20px" xmlns="http://www.w3.org/2000/svg">
-              <path d="M117.25,157.92a60,60,0,1,0-66.5,0A95.83,95.83,0,0,0,3.53,195.63a8,8,0,1,0,13.4,8.74,80,80,0,0,1,134.14,0,8,8,0,0,0,13.4-8.74A95.83,95.83,0,0,0,117.25,157.92ZM40,108a44,44,0,1,1,44,44A44.05,44.05,0,0,1,40,108Zm210.14,98.7a8,8,0,0,1-11.07-2.33A79.83,79.83,0,0,0,172,168a8,8,0,0,1,0-16,44,44,0,1,0-16.34-84.87,8,8,0,1,1-5.94-14.85,60,60,0,0,1,55.53,105.64,95.83,95.83,0,0,1,47.22,37.71A8,8,0,0,1,250.14,206.7Z"></path>
-            </svg>
-          </div>
-          <span className="text-[10px] font-semibold">Players</span>
+        <NavLink to={participantsPath} className={({ isActive }) => `flex flex-col items-center justify-center space-y-1 w-1/3 py-2 ${isActive ? 'bg-primary-light dark:bg-primary/20 rounded-2xl' : ''}`}>
+          <span className={`material-symbols-outlined ${location.pathname.startsWith('/participants') ? 'text-primary dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400'}`}>groups</span>
+          <span className={`text-xs ${location.pathname.startsWith('/participants') ? 'font-semibold text-primary dark:text-indigo-400' : 'font-medium text-slate-500 dark:text-slate-400'}`}>Players</span>
         </NavLink>
-      </div>
-    </nav>
+      </nav>
+    </footer>
   );
 };
 
