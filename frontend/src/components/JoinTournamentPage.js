@@ -119,7 +119,7 @@ function JoinTournamentPage({ currentUser, globalSetError, globalSetIsLoading, g
   if (!tournament && !showSuccess) {
     return (
       <div className="p-4 pb-24">
-        <div className="bg-white dark:bg-surface-dark rounded-xl shadow-sm p-6 text-center">
+        <div className="bg-white dark:bg-surface-dark rounded-3xl shadow-sm p-6 text-center">
           <span className="material-symbols-outlined text-red-500 text-5xl mb-3">error</span>
           <h2 className="text-lg font-bold text-slate-900 dark:text-slate-50 mb-2">Error Processing Invitation</h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
@@ -144,7 +144,7 @@ function JoinTournamentPage({ currentUser, globalSetError, globalSetIsLoading, g
         </div>
       )}
       {tournament && (
-        <div className="bg-white dark:bg-surface-dark rounded-xl shadow-sm p-6 text-center">
+        <div className="bg-white dark:bg-surface-dark rounded-3xl shadow-sm p-6 text-center">
           <span className="material-symbols-outlined text-primary text-5xl mb-3">sports_tennis</span>
           <h1 className="text-lg font-bold text-slate-900 dark:text-slate-50 mb-2">{tournament.name}</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Processing your invitation...</p>

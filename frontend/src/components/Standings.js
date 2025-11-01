@@ -51,16 +51,22 @@ const Standings = ({ tournaments }) => {
   }
 
   return (
-    <div className="p-4 pb-24">
-      <div className="px-2 mb-3">
-        <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">Standings</h2>
-        <p className="text-sm text-slate-500 dark:text-slate-400">Group stage rankings</p>
+    <div className="fixed top-[44px] left-0 right-0 bottom-[72px] flex flex-col">
+      <div className="px-4 pt-3 pb-3">
+        <div className="px-2">
+          <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">Standings</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Group stage rankings</p>
+        </div>
       </div>
-      <Leaderboard 
-        participants={participants} 
-        matches={matches} 
-        playoffParticipants={currentTournament.playoff_participants || 4}
-      />
+      <div className="flex-1 overflow-y-auto px-4">
+        <div className="pb-6">
+          <Leaderboard 
+            participants={participants} 
+            matches={matches} 
+            playoffParticipants={currentTournament.playoff_participants || 4}
+          />
+        </div>
+      </div>
     </div>
   );
 };

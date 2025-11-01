@@ -24,7 +24,7 @@ const Header = ({ title, tournaments, currentTournamentId, onTournamentChange, o
 
   return (
     <>
-    <header className="fixed top-0 left-0 right-0 z-50 px-4 py-3 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-sm border-b border-border-light dark:border-border-dark">
+    <header className="fixed top-0 left-0 right-0 z-50 px-4 py-1.5 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-sm border-b border-border-light dark:border-border-dark">
       <div className="flex items-center justify-between">
         <button onClick={() => setShowFeedback(true)} className="w-10 h-10 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
           <span className="material-symbols-outlined text-slate-600 dark:text-slate-400">feedback</span>
@@ -68,7 +68,7 @@ const Header = ({ title, tournaments, currentTournamentId, onTournamentChange, o
 
     {showFeedback && (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
-        <div className="bg-white dark:bg-surface-dark rounded-xl shadow-xl max-w-md w-full p-6">
+        <div className="bg-white dark:bg-surface-dark rounded-3xl shadow-xl max-w-md w-full p-6">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-bold text-slate-900 dark:text-slate-50">Send Feedback</h3>
             <button onClick={() => setShowFeedback(false)} className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
@@ -79,19 +79,19 @@ const Header = ({ title, tournaments, currentTournamentId, onTournamentChange, o
             value={feedback}
             onChange={(e) => setFeedback(e.target.value)}
             placeholder="Tell us what you think..."
-            className="w-full h-32 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50"
+            className="w-full h-32 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50"
           />
           <div className="flex gap-3 mt-4">
             <button
               onClick={() => setShowFeedback(false)}
-              className="flex-1 px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600"
+              className="flex-1 px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 rounded-2xl hover:bg-slate-200 dark:hover:bg-slate-600"
             >
               Cancel
             </button>
             <button
               onClick={handleSubmitFeedback}
               disabled={!feedback.trim() || isSubmitting}
-              className="flex-1 px-4 py-2 text-sm font-semibold text-white bg-primary rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2 text-sm font-semibold text-white bg-primary rounded-2xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? 'Sending...' : 'Send'}
             </button>

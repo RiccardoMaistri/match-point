@@ -49,12 +49,12 @@ function TournamentForm({ onSubmit, initialData = null, onCancel }) {
     onSubmit(dataToSubmit);
   };
 
-  const inputClasses = "mt-1 block w-full px-4 py-3 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary sm:text-sm text-text-light dark:text-text-dark";
+  const inputClasses = "mt-1 block w-full px-4 py-3 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary sm:text-sm text-text-light dark:text-text-dark";
   const labelClasses = "block text-sm font-medium text-text-light dark:text-text-dark mb-1";
 
   return (
     <div className="fixed inset-0 bg-background-dark bg-opacity-75 flex items-center justify-center z-50 p-4">
-      <div className="bg-card-light dark:bg-card-dark p-6 sm:p-8 rounded-lg shadow-xl w-full max-w-lg animate-slide-up">
+      <div className="bg-card-light dark:bg-card-dark p-6 sm:p-8 rounded-2xl shadow-xl w-full max-w-lg animate-slide-up">
         <form onSubmit={handleSubmit} className="space-y-6">
           <h3 className="text-2xl font-bold text-text-light dark:text-text-dark mb-6">{isEditing ? 'Edit Tournament' : 'Create New Tournament'}</h3>
 
@@ -114,14 +114,14 @@ function TournamentForm({ onSubmit, initialData = null, onCancel }) {
                 <button
                     type="button"
                     onClick={onCancel}
-                    className="px-6 py-2 text-sm font-semibold text-subtext-light dark:text-subtext-dark bg-border-light dark:bg-border-dark rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
+                    className="px-6 py-2 text-sm font-semibold text-subtext-light dark:text-subtext-dark bg-border-light dark:bg-border-dark rounded-2xl hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
                 >
                     Cancel
                 </button>
             )}
             <button
               type="submit"
-              className="px-6 py-2 text-sm font-semibold text-white bg-primary rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary shadow-lg transition-colors"
+              className="px-6 py-2 text-sm font-semibold text-white bg-primary rounded-2xl hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary shadow-lg transition-colors"
             >
               {isEditing ? 'Save Changes' : 'Create Tournament'}
             </button>

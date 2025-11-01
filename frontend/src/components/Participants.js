@@ -81,36 +81,39 @@ function Participants({ currentUser }) {
   const isOwner = currentUser && tournament.user_id === currentUser.id;
 
   return (
-    <div className="p-4 pb-24">
-      <div className="px-2 mb-3 flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">Players</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400">{participants.length} participants</p>
+    <div className="fixed top-[44px] left-0 right-0 bottom-[72px] flex flex-col">
+      <div className="px-4 pt-3 pb-3">
+        <div className="px-2 flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">Players</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400">{participants.length} participants</p>
+          </div>
+          {isOwner && tournament.registration_open && (
+            <button 
+              onClick={handleInvite}
+              className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-primary rounded-full hover:bg-indigo-700 transition-colors shadow-md"
+            >
+              <span className="material-symbols-outlined text-base">share</span>
+              <span>Invite</span>
+            </button>
+          )}
         </div>
-        {isOwner && tournament.registration_open && (
-          <button 
-            onClick={handleInvite}
-            className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-primary rounded-full hover:bg-indigo-700 transition-colors shadow-md"
-          >
-            <span className="material-symbols-outlined text-base">share</span>
-            <span>Invite</span>
-          </button>
+        {copyMessage && (
+          <div className="mt-3 px-2">
+            <p className="text-sm text-green-600 dark:text-green-400">{copyMessage}</p>
+          </div>
         )}
       </div>
 
-      {copyMessage && (
-        <div className="mb-3 px-2">
-          <p className="text-sm text-green-600 dark:text-green-400">{copyMessage}</p>
-        </div>
-      )}
-
+      <div className="flex-1 overflow-y-auto px-4">
+        <div className="pb-6">
       {participants.length === 0 ? (
-        <div className="bg-white dark:bg-surface-dark rounded-xl shadow-sm p-8 text-center">
+        <div className="bg-white dark:bg-surface-dark rounded-3xl shadow-sm p-8 text-center">
           <span className="material-symbols-outlined text-slate-400 dark:text-slate-500 text-5xl mb-3">group_off</span>
           <p className="text-slate-500 dark:text-slate-400">No participants yet</p>
         </div>
       ) : (
-        <div className="bg-white dark:bg-surface-dark rounded-xl shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-surface-dark rounded-3xl shadow-sm overflow-hidden">
           <div className="divide-y divide-gray-200 dark:divide-border-dark">
             {participants.map((participant) => (
               <div key={participant.id} className="flex items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
@@ -137,6 +140,8 @@ function Participants({ currentUser }) {
           </div>
         </div>
       )}
+        </div>
+      </div>
 
       <ConfirmModal
         isOpen={confirmModal.isOpen}

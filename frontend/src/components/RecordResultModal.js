@@ -49,7 +49,7 @@ function RecordResultModal({ isOpen, onClose, match, participants, onSubmitResul
   if (!participant1 || !participant2) {
     return (
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
-        <div className="bg-white dark:bg-surface-dark p-6 rounded-xl shadow-2xl max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
+        <div className="bg-white dark:bg-surface-dark p-6 rounded-3xl shadow-2xl max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
               <span className="material-symbols-outlined text-red-600 dark:text-red-400">error</span>
@@ -57,7 +57,7 @@ function RecordResultModal({ isOpen, onClose, match, participants, onSubmitResul
             <h3 className="text-lg font-bold text-slate-900 dark:text-slate-50">Error</h3>
           </div>
           <p className="text-sm text-slate-600 dark:text-slate-400 mb-6 ml-13">Participant data for this match is missing.</p>
-          <button onClick={onClose} className="w-full px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-slate-50 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 font-semibold transition-colors">
+          <button onClick={onClose} className="w-full px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-slate-50 rounded-2xl hover:bg-slate-200 dark:hover:bg-slate-600 font-semibold transition-colors">
             Close
           </button>
         </div>
@@ -119,12 +119,12 @@ function RecordResultModal({ isOpen, onClose, match, participants, onSubmitResul
     onSubmitResult(tournamentId, match.id, resultData);
   };
 
-  const inputClasses = "mt-1 block w-full px-3 py-2 bg-white dark:bg-slate-800 border border-gray-300 dark:border-border-dark rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm text-slate-900 dark:text-slate-50";
+  const inputClasses = "mt-1 block w-full px-3 py-2 bg-white dark:bg-slate-800 border border-gray-300 dark:border-border-dark rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm text-slate-900 dark:text-slate-50";
   const labelClasses = "block text-sm font-medium text-slate-700 dark:text-slate-300";
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-center items-center p-4" onClick={onClose}>
-      <div className="relative bg-white dark:bg-surface-dark w-full max-w-lg p-6 rounded-xl shadow-2xl animate-slide-up" onClick={(e) => e.stopPropagation()}>
+      <div className="relative bg-white dark:bg-surface-dark w-full max-w-lg p-6 rounded-3xl shadow-2xl animate-slide-up" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center">
@@ -137,13 +137,13 @@ function RecordResultModal({ isOpen, onClose, match, participants, onSubmitResul
           </button>
         </div>
 
-        <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-3 mb-6">
+        <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-3 mb-6">
           <p className="text-sm text-slate-600 dark:text-slate-400">Match: <span className="font-semibold text-slate-900 dark:text-slate-50">{participant1.name}</span> vs <span className="font-semibold text-slate-900 dark:text-slate-50">{participant2.name}</span></p>
           {match.round_number && <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Round {match.round_number} · Match {match.match_number}</p>}
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          {error && <p className="text-xs text-red-700 bg-red-100 dark:bg-red-500/20 dark:text-red-400 p-3 rounded-lg border border-red-200 dark:border-red-500/30">{error}</p>}
+          {error && <p className="text-xs text-red-700 bg-red-100 dark:bg-red-500/20 dark:text-red-400 p-3 rounded-2xl border border-red-200 dark:border-red-500/30">{error}</p>}
 
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4 mb-3">
@@ -177,10 +177,10 @@ function RecordResultModal({ isOpen, onClose, match, participants, onSubmitResul
           </div>
 
           <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">
+            <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 rounded-2xl hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">
               Cancel
             </button>
-            <button type="submit" className="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-primary rounded-lg hover:bg-indigo-700 shadow-md transition-colors">
+            <button type="submit" className="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-primary rounded-2xl hover:bg-indigo-700 shadow-md transition-colors">
               Save Result
             </button>
           </div>

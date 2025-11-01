@@ -50,7 +50,7 @@ const Leaderboard = ({ participants, matches, playoffParticipants = 4 }) => {
   }
 
   return (
-    <div className="bg-white dark:bg-surface-dark rounded-xl shadow-sm overflow-hidden">
+    <div className="bg-white dark:bg-surface-dark rounded-3xl shadow-sm overflow-hidden">
       <div className="p-4 space-y-3">
         {leaderboardData.map((player, index) => {
           const isQualified = index < playoffParticipants;

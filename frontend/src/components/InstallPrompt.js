@@ -42,7 +42,7 @@ const InstallPrompt = () => {
   if (!showPrompt && !isIOS && !isAndroid) return null;
 
   return (
-    <div className="fixed bottom-20 left-4 right-4 bg-white rounded-lg shadow-lg border-2 border-primary p-4 z-50 animate-slide-up">
+    <div className="fixed bottom-20 left-4 right-4 bg-white rounded-2xl shadow-lg border-2 border-primary p-4 z-50 animate-slide-up">
       <button onClick={handleDismiss} className="absolute top-2 right-2 text-gray-400 hover:text-gray-600">
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -50,7 +50,7 @@ const InstallPrompt = () => {
       </button>
 
       <div className="flex items-start gap-3">
-        <div className="flex-shrink-0 w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+        <div className="flex-shrink-0 w-10 h-10 bg-primary rounded-2xl flex items-center justify-center">
           <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
           </svg>
@@ -78,7 +78,7 @@ const InstallPrompt = () => {
           {deferredPrompt && (
             <button
               onClick={handleInstall}
-              className="mt-2 px-4 py-2 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary-hover transition-colors"
+              className="mt-2 px-4 py-2 bg-primary text-white text-xs font-semibold rounded-2xl hover:bg-primary-hover transition-colors"
             >
               Installa App
             </button>

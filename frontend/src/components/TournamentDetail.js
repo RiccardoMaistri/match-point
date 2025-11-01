@@ -117,8 +117,8 @@ function TournamentDetail({ currentUser }) {
     const p2 = participants.find(p => p.id === match.participant2_id);
     const isUserMatch = currentUser && (p1?.email === currentUser.email || p2?.email === currentUser.email);
     const isCompleted = match.status === 'completed';
-    const p1Name = getParticipantName(match.participant1_id) + (isUserMatch && p1?.email === currentUser.email ? ' (You)' : '');
-    const p2Name = getParticipantName(match.participant2_id) + (isUserMatch && p2?.email === currentUser.email ? ' (You)' : '');
+    const p1Name = getParticipantName(match.participant1_id);
+    const p2Name = getParticipantName(match.participant2_id);
 
     const p1Sets = [];
     const p2Sets = [];
@@ -213,7 +213,7 @@ function TournamentDetail({ currentUser }) {
           <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">Playoffs</h2>
           <p className="text-sm text-slate-500 dark:text-slate-400">Knockout stage</p>
         </div>
-        <div className="bg-white dark:bg-surface-dark rounded-xl shadow-sm flex flex-col max-h-[calc(100vh-366px)]">
+        <div className="bg-white dark:bg-surface-dark rounded-3xl shadow-sm flex flex-col max-h-[calc(100vh-366px)]">
           <div className="overflow-y-auto">
             <div className="p-4 space-y-4 divide-y divide-gray-200 dark:divide-border-dark">
               {sortedRounds.map(roundNum => (
@@ -235,42 +235,45 @@ function TournamentDetail({ currentUser }) {
   };
 
   return (
-    <div className="pt-16 p-3 pb-24">
+    <div className="fixed top-[44px] left-0 right-0 bottom-[72px] flex flex-col">
       {/* Status Badge */}
-      {!groupStageComplete && groupMatches.length > 0 && (
-        <div className="flex items-center justify-center gap-2 mt-2 mb-6 px-4 py-2 bg-blue-50/50 dark:bg-blue-900/20 rounded-full border border-blue-200 dark:border-blue-800 w-fit mx-auto">
-          <span className="material-symbols-outlined text-blue-600 dark:text-blue-400 text-base">timer</span>
-          <span className="text-sm font-medium text-blue-800 dark:text-blue-300">Group stage in progress</span>
-        </div>
-      )}
-      {groupStageComplete && !playoffsStarted && (
-        isOwner ? (
-          <button
-            onClick={handleGenerateMatches}
-            className="flex items-center justify-center gap-2 mt-2 mb-6 px-4 py-2 bg-purple-50/50 dark:bg-purple-900/20 rounded-full border border-purple-200 dark:border-purple-800 w-fit mx-auto hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-purple-600 dark:text-purple-400 text-base">emoji_events</span>
-            <span className="text-sm font-medium text-purple-800 dark:text-purple-300">Start Playoff Phase</span>
-          </button>
-        ) : (
-          <div className="flex items-center justify-center gap-2 mt-2 mb-6 px-4 py-2 bg-amber-50/50 dark:bg-amber-900/20 rounded-full border border-amber-200 dark:border-amber-800 w-fit mx-auto">
-            <span className="material-symbols-outlined text-amber-600 dark:text-amber-400 text-base">schedule</span>
-            <span className="text-sm font-medium text-amber-800 dark:text-amber-300">Waiting for playoffs to start</span>
+      <div className="px-3 pt-3 pb-2">
+        {!groupStageComplete && groupMatches.length > 0 && (
+          <div className="flex items-center justify-center gap-2 mb-2 px-4 py-2 bg-blue-50/50 dark:bg-blue-900/20 rounded-full border border-blue-200 dark:border-blue-800 w-fit mx-auto">
+            <span className="material-symbols-outlined text-blue-600 dark:text-blue-400 text-base">timer</span>
+            <span className="text-sm font-medium text-blue-800 dark:text-blue-300">Group stage in progress</span>
           </div>
-        )
-      )}
-      {playoffsStarted && (
-        <div className="flex items-center justify-center gap-2 mt-2 mb-6 px-4 py-2 bg-purple-50/50 dark:bg-purple-900/20 rounded-full border border-purple-200 dark:border-purple-800 w-fit mx-auto">
-          <span className="material-symbols-outlined text-purple-600 dark:text-purple-400 text-base">emoji_events</span>
-          <span className="text-sm font-medium text-purple-800 dark:text-purple-300">Playoffs in progress</span>
-        </div>
-      )}
+        )}
+        {groupStageComplete && !playoffsStarted && (
+          isOwner ? (
+            <button
+              onClick={handleGenerateMatches}
+              className="flex items-center justify-center gap-2 mb-2 px-4 py-2 bg-purple-50/50 dark:bg-purple-900/20 rounded-full border border-purple-200 dark:border-purple-800 w-fit mx-auto hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-purple-600 dark:text-purple-400 text-base">emoji_events</span>
+              <span className="text-sm font-medium text-purple-800 dark:text-purple-300">Start Playoff Phase</span>
+            </button>
+          ) : (
+            <div className="flex items-center justify-center gap-2 mb-2 px-4 py-2 bg-amber-50/50 dark:bg-amber-900/20 rounded-full border border-amber-200 dark:border-amber-800 w-fit mx-auto">
+              <span className="material-symbols-outlined text-amber-600 dark:text-amber-400 text-base">schedule</span>
+              <span className="text-sm font-medium text-amber-800 dark:text-amber-300">Waiting for playoffs to start</span>
+            </div>
+          )
+        )}
+        {playoffsStarted && (
+          <div className="flex items-center justify-center gap-2 mb-2 px-4 py-2 bg-purple-50/50 dark:bg-purple-900/20 rounded-full border border-purple-200 dark:border-purple-800 w-fit mx-auto">
+            <span className="material-symbols-outlined text-purple-600 dark:text-purple-400 text-base">emoji_events</span>
+            <span className="text-sm font-medium text-purple-800 dark:text-purple-300">Playoffs are about to start</span>
+          </div>
+        )}
+      </div>
 
       {/* Tab Switcher */}
-      <div className="sticky top-16 z-40 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl flex mb-6">
+      <div className="px-3 pb-3">
+        <div className="p-1 bg-slate-100 dark:bg-slate-800 rounded-3xl flex">
         <button
           onClick={() => setActiveTab('group')}
-          className={`flex-1 text-center py-2.5 px-4 rounded-lg text-sm font-semibold cursor-pointer transition-colors duration-300 ${
+          className={`flex-1 text-center py-1.5 px-3 rounded-2xl text-xs font-semibold cursor-pointer transition-colors duration-300 ${
             activeTab === 'group'
               ? 'bg-indigo-600 text-white'
               : 'text-slate-600 dark:text-slate-300'
@@ -280,7 +283,7 @@ function TournamentDetail({ currentUser }) {
         </button>
         <button
           onClick={() => canAccessPlayoffs && setActiveTab('playoffs')}
-          className={`flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-all duration-300 flex flex-col items-center justify-center ${
+          className={`flex-1 py-1.5 px-2 rounded-2xl text-xs font-semibold transition-all duration-300 flex flex-col items-center justify-center ${
             activeTab === 'playoffs'
               ? 'bg-indigo-600 text-white shadow-md'
               : canAccessPlayoffs
@@ -289,33 +292,37 @@ function TournamentDetail({ currentUser }) {
           }`}
         >
           <div className="flex items-center gap-1">
-            {!canAccessPlayoffs && <span className="material-symbols-outlined text-sm">lock</span>}
+            {!canAccessPlayoffs && <span className="material-symbols-outlined text-xs">lock</span>}
             {canAccessPlayoffs && activeTab !== 'playoffs' && (
-              <span className="material-symbols-outlined text-sm">emoji_events</span>
+              <span className="material-symbols-outlined text-xs">emoji_events</span>
             )}
             <span>Playoffs</span>
           </div>
           {!canAccessPlayoffs && remainingGroupMatches > 0 && (
-            <span className="text-[10px] opacity-75 mt-0.5">{remainingGroupMatches} match{remainingGroupMatches !== 1 ? 'es' : ''} left</span>
+            <span className="text-[9px] opacity-75 mt-0.5">{remainingGroupMatches} match{remainingGroupMatches !== 1 ? 'es' : ''} left</span>
           )}
         </button>
+        </div>
       </div>
 
-      {/* Group Stage Tab */}
-      {activeTab === 'group' && (
-        <div className="space-y-6">
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-y-auto px-3">
+        {/* Group Stage Tab */}
+        {activeTab === 'group' && (
+          <div className="space-y-6 pb-6">
           {/* Generate Matches Button */}
           {isOwner && canGenerateMatches && tournament.status === 'open' && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <button onClick={handleGenerateMatches} className="w-full px-4 py-2 text-sm font-semibold text-white bg-primary rounded-lg hover:bg-indigo-700 transition-colors">
+            <div className="bg-blue-50 border border-blue-200 rounded-2xl p-3">
+              <button onClick={handleGenerateMatches} className="w-full px-4 py-2 text-sm font-semibold text-white bg-primary rounded-2xl hover:bg-indigo-700 transition-colors">
                 {matches.length > 0 ? 'Regenerate Matches' : 'Kick Off Tournament'}
               </button>
             </div>
           )}
 
           {!canGenerateMatches && tournament.status === 'open' && isOwner && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <p className="text-xs text-blue-800">ℹ️ Add at least 2 participants to generate matches.</p>
+            <div className="flex items-center gap-2 px-4 py-3 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-200 dark:border-slate-700">
+              <span className="material-symbols-outlined text-slate-400 dark:text-slate-500 text-lg">group_add</span>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Add at least 2 participants to start</p>
             </div>
           )}
 
@@ -325,7 +332,7 @@ function TournamentDetail({ currentUser }) {
               <div className="px-2 mb-3">
                 <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">My Matches</h2>
               </div>
-              <div className="bg-white dark:bg-surface-dark rounded-xl shadow-sm flex flex-col">
+              <div className="bg-white dark:bg-surface-dark rounded-3xl shadow-sm flex flex-col">
                 <div className="p-4 space-y-4 divide-y divide-gray-200 dark:divide-border-dark">
                   {myMatches.filter(m => m.phase === 'group').map((match, idx) => (
                     <div key={match.id} className={idx > 0 ? 'pt-4' : ''}>
@@ -346,8 +353,8 @@ function TournamentDetail({ currentUser }) {
               >
                 <div>
                   <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">All Matches</h2>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 text-left">
-                    Top {tournament.playoff_participants} players advance
+                  <p className="text-xs text-slate-500 dark:text-slate-400 text-left">
+                    Tap to expand
                   </p>
                 </div>
                 <span className={`material-symbols-outlined text-slate-500 dark:text-slate-400 transition-transform ${allMatchesOpen ? 'rotate-180' : ''}`}>
@@ -355,7 +362,7 @@ function TournamentDetail({ currentUser }) {
                 </span>
               </button>
               {allMatchesOpen && (
-                <div className="bg-white dark:bg-surface-dark rounded-xl shadow-sm p-4 space-y-4 divide-y divide-gray-200 dark:divide-border-dark">
+                <div className="bg-white dark:bg-surface-dark rounded-3xl shadow-sm p-4 space-y-4 divide-y divide-gray-200 dark:divide-border-dark">
                   {groupMatches.filter(match => !myMatches.some(m => m.id === match.id)).map((match, idx) => (
                     <div key={match.id} className={idx > 0 ? 'pt-4' : ''}>
                       {renderMatch(match, false)}
@@ -365,12 +372,12 @@ function TournamentDetail({ currentUser }) {
               )}
             </div>
           )}
-        </div>
-      )}
+          </div>
+        )}
 
-      {/* Playoffs Tab */}
-      {activeTab === 'playoffs' && (
-        <div className="space-y-6">
+        {/* Playoffs Tab */}
+        {activeTab === 'playoffs' && (
+          <div className="space-y-6 pb-6">
           {playoffMatches.length > 0 ? (
             renderPlayoffRounds()
           ) : (
@@ -378,8 +385,9 @@ function TournamentDetail({ currentUser }) {
               <p className="text-slate-500 dark:text-slate-400">Playoffs not yet generated</p>
             </div>
           )}
-        </div>
-      )}
+          </div>
+        )}
+      </div>
 
       {isResultModalOpen && currentMatchForResult && (
         <RecordResultModal
