@@ -198,14 +198,6 @@ function TournamentDetail({ currentUser }) {
     });
 
     const sortedRounds = Object.keys(roundsMap).sort((a, b) => b - a);
-    const getRoundName = (roundNum) => {
-      const totalRounds = Math.max(...playoffMatches.map(m => m.round_number || 1));
-      const remaining = totalRounds - roundNum + 1;
-      if (remaining === 1) return 'Final';
-      if (remaining === 2) return 'Semi-finals';
-      if (remaining === 3) return 'Quarter-finals';
-      return `Round ${roundNum}`;
-    };
 
     return (
       <div>
