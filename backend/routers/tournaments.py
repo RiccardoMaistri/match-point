@@ -94,7 +94,47 @@ async def get_tournament(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found"
         )
-    return Tournament(**tournament_db)
+    
+    tournament = Tournament(**tournament_db)
+    
+    # Check if we need to generate next playoff round
+    if tournament.status == 'playoffs':
+        playoff_matches = [m for m in tournament.matches if m.phase == 'playoff']
+        if playoff_matches:
+            rounds = {}
+            for m in playoff_matches:
+                if m.round_number not in rounds:
+                    rounds[m.round_number] = []
+                rounds[m.round_number].append(m)
+            
+            max_round = max(rounds.keys())
+            current_round_matches = rounds[max_round]
+            
+            if all(m.status == 'completed' for m in current_round_matches):
+                winners = [m.winner_id for m in current_round_matches if m.winner_id and not m.is_bye]
+                
+                if len(winners) == 1:
+                    tournament.status = 'completed'
+                    update_tournament_db(tournament_id, tournament.model_dump(mode='json'))
+                elif len(winners) > 1:
+                    next_round = max_round + 1
+                    match_num = max(m.match_number for m in tournament.matches) + 1
+                    
+                    for i in range(0, len(winners), 2):
+                        if i + 1 < len(winners):
+                            new_match = Match(
+                                participant1_id=winners[i],
+                                participant2_id=winners[i + 1],
+                                match_number=match_num,
+                                round_number=next_round,
+                                phase='playoff',
+                            )
+                            tournament.matches.append(new_match)
+                            match_num += 1
+                    
+                    update_tournament_db(tournament_id, tournament.model_dump(mode='json'))
+    
+    return tournament
 
 
 @router.put(
@@ -500,23 +540,26 @@ async def record_match_result(
         current_round_matches = [m for m in playoff_matches if m.round_number == current_round]
         
         if all(m.status == 'completed' for m in current_round_matches):
-            
             sorted_round_matches = sorted(current_round_matches, key=lambda m: m.match_number)
-            winners = [m.winner_id for m in sorted_round_matches if m.winner_id]
+            winners = [m.winner_id for m in sorted_round_matches if m.winner_id and not m.is_bye]
             
-            if len(winners) == 1 and not any(m.is_bye for m in current_round_matches):
+            if len(winners) == 1:
                 tournament.status = "completed"
             elif len(winners) > 1:
                 next_round_number = current_round + 1
-                next_round_matches = [m for m in playoff_matches if m.round_number == next_round_number]
+                match_num = max(m.match_number for m in tournament.matches) + 1
                 
-                # Logic to fill in the next round's matches
-                winner_iter = iter(winners)
-                for match in sorted(next_round_matches, key=lambda m: m.match_number):
-                    if not match.participant1_id:
-                        match.participant1_id = next(winner_iter, None)
-                    if not match.participant2_id:
-                        match.participant2_id = next(winner_iter, None)
+                for i in range(0, len(winners), 2):
+                    if i + 1 < len(winners):
+                        new_match = Match(
+                            participant1_id=winners[i],
+                            participant2_id=winners[i + 1],
+                            match_number=match_num,
+                            round_number=next_round_number,
+                            phase='playoff',
+                        )
+                        tournament.matches.append(new_match)
+                        match_num += 1
 
     update_tournament_db(tournament_id, tournament.model_dump())
     return match_to_update
@@ -626,7 +669,7 @@ async def generate_playoffs(
         )
 
     tournament = _generate_playoffs_from_standings(tournament)
-    update_tournament_db(tournament_id, tournament.model_dump())
+    update_tournament_db(tournament_id, tournament.model_dump(mode='json'))
     
     return {
         "message": "Playoff bracket generated",

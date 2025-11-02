@@ -49,14 +49,19 @@ function TournamentForm({ onSubmit, initialData = null, onCancel }) {
     onSubmit(dataToSubmit);
   };
 
-  const inputClasses = "mt-1 block w-full px-4 py-3 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary sm:text-sm text-text-light dark:text-text-dark";
-  const labelClasses = "block text-sm font-medium text-text-light dark:text-text-dark mb-1";
+  const inputClasses = "mt-1 block w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm text-slate-900 dark:text-slate-50 transition-all";
+  const labelClasses = "block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1";
 
   return (
-    <div className="fixed inset-0 bg-background-dark bg-opacity-75 flex items-center justify-center z-50 p-4">
-      <div className="bg-card-light dark:bg-card-dark p-6 sm:p-8 rounded-2xl shadow-xl w-full max-w-lg animate-slide-up">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+      <div className="bg-white dark:bg-surface-dark p-6 sm:p-8 rounded-3xl shadow-2xl w-full max-w-lg animate-scale-in">
         <form onSubmit={handleSubmit} className="space-y-6">
-          <h3 className="text-2xl font-bold text-text-light dark:text-text-dark mb-6">{isEditing ? 'Edit Tournament' : 'Create New Tournament'}</h3>
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-12 h-12 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center">
+              <span className="material-symbols-outlined text-primary text-2xl">{isEditing ? 'edit' : 'emoji_events'}</span>
+            </div>
+            <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-50">{isEditing ? 'Edit Tournament' : 'Create New Tournament'}</h3>
+          </div>
 
           <div>
             <label htmlFor="name" className={labelClasses}>
@@ -109,19 +114,19 @@ function TournamentForm({ onSubmit, initialData = null, onCancel }) {
             </div>
           </div>
 
-          <div className="flex justify-end space-x-4 pt-4">
+          <div className="flex gap-3 pt-4">
             {onCancel && (
                 <button
                     type="button"
                     onClick={onCancel}
-                    className="px-6 py-2 text-sm font-semibold text-subtext-light dark:text-subtext-dark bg-border-light dark:bg-border-dark rounded-2xl hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
+                    className="flex-1 px-6 py-3 text-sm font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 rounded-2xl hover:bg-slate-200 dark:hover:bg-slate-600 transition-all"
                 >
                     Cancel
                 </button>
             )}
             <button
               type="submit"
-              className="px-6 py-2 text-sm font-semibold text-white bg-primary rounded-2xl hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary shadow-lg transition-colors"
+              className="flex-1 px-6 py-3 text-sm font-semibold text-white bg-primary rounded-2xl hover:bg-indigo-700 shadow-lg hover:shadow-xl transition-all transform hover:scale-[1.02]"
             >
               {isEditing ? 'Save Changes' : 'Create Tournament'}
             </button>

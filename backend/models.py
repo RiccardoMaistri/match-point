@@ -7,12 +7,12 @@ from typing import List, Literal, Optional
 class Participant(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
-    email: str
+    email: EmailStr
     ranking: Optional[int] = None
 
     @field_validator('email')
     def email_to_lower(cls, v):
-        return v.lower()
+        return str(v).lower()
 
 
 class Match(BaseModel):
@@ -25,15 +25,14 @@ class Match(BaseModel):
     participant1_id: Optional[str] = None
     participant2_id: Optional[str] = None
     winner_id: Optional[str] = None
-    score_participant1: Optional[int] = None
-    score_participant2: Optional[int] = None
+    score_participant1: Optional[int] = None  # Total score (sum of sets)
+    score_participant2: Optional[int] = None  # Total score (sum of sets)
     set1_score_participant1: Optional[int] = None
     set1_score_participant2: Optional[int] = None
     set2_score_participant1: Optional[int] = None
     set2_score_participant2: Optional[int] = None
     set3_score_participant1: Optional[int] = None
     set3_score_participant2: Optional[int] = None
-    winner_partecipant: Optional[int] = None
     is_bye: bool = False
     status: Literal['pending', 'in_progress', 'completed', 'cancelled'] = 'pending'
 

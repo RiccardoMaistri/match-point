@@ -91,11 +91,9 @@ def update_tournament_db(tournament_id: str, tournament_update_data: Dict[str, A
     tournaments = load_tournaments()
     for i, t in enumerate(tournaments):
         if t.get("id") == tournament_id:
-            # Un semplice update, potrebbe essere più sofisticato per aggiornamenti parziali
-            updated_tournament = {**t, **tournament_update_data}
-            tournaments[i] = updated_tournament
+            tournaments[i] = tournament_update_data
             save_tournaments(tournaments)
-            return updated_tournament
+            return tournament_update_data
     return None
 
 

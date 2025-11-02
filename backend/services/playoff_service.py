@@ -11,8 +11,11 @@ def _generate_playoffs_from_standings(tournament_obj: Tournament) -> Tournament:
 
     qualified_participants = [s["participant"] for s in standings[:num_playoff_participants]]
 
-    # Clear existing playoff matches if any
-    tournament_obj.matches = [m for m in tournament_obj.matches if m.phase != 'playoff']
+    # Keep group stage matches, remove any existing playoff matches
+    group_matches_before = len([m for m in tournament_obj.matches if m.phase == 'group'])
+    tournament_obj.matches = [m for m in tournament_obj.matches if m.phase == 'group']
+    group_matches_after = len(tournament_obj.matches)
+    print(f"DEBUG: Group matches before={group_matches_before}, after={group_matches_after}")
 
     # Determine the bracket size (next power of 2)
     bracket_size = 2**math.ceil(math.log2(num_playoff_participants))
@@ -72,20 +75,5 @@ def _generate_playoffs_from_standings(tournament_obj: Tournament) -> Tournament:
             pass
 
     tournament_obj.matches.extend(current_round_matches)
-
-    # Generate subsequent rounds placeholders
-    num_rounds = math.ceil(math.log2(num_playoff_participants))
-    for r in range(2, num_rounds + 1):
-        num_matches_in_round = bracket_size // (2**r)
-        for _ in range(num_matches_in_round):
-            match = Match(
-                match_number=match_num,
-                round_number=r,
-                phase='playoff',
-                status='pending'
-            )
-            tournament_obj.matches.append(match)
-            match_num += 1
-
     tournament_obj.status = "playoffs"
     return tournament_obj

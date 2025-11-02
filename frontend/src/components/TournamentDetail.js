@@ -119,6 +119,7 @@ function TournamentDetail({ currentUser }) {
     const isCompleted = match.status === 'completed';
     const p1Name = getParticipantName(match.participant1_id);
     const p2Name = getParticipantName(match.participant2_id);
+    const canRecordResult = match.phase === 'playoff' ? isUserMatch : showRecordButton;
 
     const p1Sets = [];
     const p2Sets = [];
@@ -167,7 +168,7 @@ function TournamentDetail({ currentUser }) {
             )}
           </div>
         </div>
-        {!isCompleted && isUserMatch && showRecordButton && (
+        {!isCompleted && isUserMatch && canRecordResult && (
           <button
             onClick={() => openRecordResultModal(match.id)}
             className="flex items-center justify-center gap-1.5 ml-4 px-3 py-1.5 bg-primary/10 dark:bg-primary/20 text-primary dark:text-indigo-300 rounded-full text-xs font-semibold hover:bg-primary/20 dark:hover:bg-primary/30 transition-colors"
@@ -176,7 +177,7 @@ function TournamentDetail({ currentUser }) {
             <span>Record Result</span>
           </button>
         )}
-        {!isCompleted && !isUserMatch && showRecordButton && (
+        {!isCompleted && !isUserMatch && canRecordResult && (
           <div className="ml-4 w-10 h-10 flex items-center justify-center">
             <button
               onClick={() => openRecordResultModal(match.id)}
@@ -190,6 +191,13 @@ function TournamentDetail({ currentUser }) {
     );
   };
 
+  const getRoundName = (roundNum, totalRounds) => {
+    if (roundNum === totalRounds) return 'Final';
+    if (roundNum === totalRounds - 1) return 'Semifinals';
+    if (roundNum === totalRounds - 2) return 'Quarterfinals';
+    return `Round ${roundNum}`;
+  };
+
   const renderPlayoffRounds = () => {
     const roundsMap = {};
     playoffMatches.forEach(m => {
@@ -197,31 +205,40 @@ function TournamentDetail({ currentUser }) {
       roundsMap[m.round_number].push(m);
     });
 
-    const sortedRounds = Object.keys(roundsMap).sort((a, b) => b - a);
+    const sortedRounds = Object.keys(roundsMap).sort((a, b) => Number(a) - Number(b));
+    const maxRound = Math.max(...sortedRounds.map(Number));
 
     return (
-      <div>
-        <div className="px-2 mb-3">
-          <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">Playoffs</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Knockout stage</p>
-        </div>
-        <div className="bg-white dark:bg-surface-dark rounded-3xl shadow-sm flex flex-col max-h-[calc(100vh-366px)]">
-          <div className="overflow-y-auto">
-            <div className="p-4 space-y-4 divide-y divide-gray-200 dark:divide-border-dark">
-              {sortedRounds.map(roundNum => (
-                roundsMap[roundNum].map((match, idx) => (
-                  <div key={match.id} className={idx > 0 || roundNum !== sortedRounds[0] ? 'pt-4' : ''}>
-                    {renderMatch(match)}
+      <div className="space-y-4">
+        {sortedRounds.map(roundNum => {
+          const roundMatches = roundsMap[roundNum];
+          const allCompleted = roundMatches.every(m => m.status === 'completed');
+          const roundName = getRoundName(Number(roundNum), maxRound);
+          
+          return (
+            <div key={roundNum}>
+              <div className="px-2 mb-3">
+                <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">{roundName}</h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{roundMatches.length} match{roundMatches.length !== 1 ? 'es' : ''}</p>
+              </div>
+              <div className="bg-white dark:bg-surface-dark rounded-3xl shadow-sm">
+                <div className="p-4 space-y-4 divide-y divide-gray-200 dark:divide-border-dark">
+                  {roundMatches.map((match, idx) => (
+                    <div key={match.id} className={idx > 0 ? 'pt-4' : ''}>
+                      {renderMatch(match)}
+                    </div>
+                  ))}
+                </div>
+                {allCompleted && Number(roundNum) < maxRound && (
+                  <div className="border-t border-gray-200 dark:border-border-dark flex items-center justify-center gap-2 p-3 bg-green-50 dark:bg-green-900/30 rounded-b-3xl text-sm">
+                    <span className="material-symbols-outlined text-green-600 dark:text-green-400 text-base">check_circle</span>
+                    <span className="font-medium text-green-800 dark:text-green-300">Round complete</span>
                   </div>
-                ))
-              ))}
+                )}
+              </div>
             </div>
-          </div>
-          <div className="mt-auto border-t border-gray-200 dark:border-border-dark flex items-center justify-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-b-xl text-sm">
-            <span className="material-symbols-outlined text-blue-600 dark:text-blue-400 text-base">timer</span>
-            <span className="font-medium text-blue-800 dark:text-blue-300">Playoffs in progress</span>
-          </div>
-        </div>
+          );
+        })}
       </div>
     );
   };
@@ -239,7 +256,14 @@ function TournamentDetail({ currentUser }) {
         {groupStageComplete && !playoffsStarted && (
           isOwner ? (
             <button
-              onClick={handleGenerateMatches}
+              onClick={async () => {
+                try {
+                  await api.generatePlayoffs(tournament.id);
+                  await fetchTournamentData();
+                } catch (err) {
+                  setError(err.message || 'Failed to generate playoffs');
+                }
+              }}
               className="flex items-center justify-center gap-2 mb-2 px-4 py-2 bg-purple-50/50 dark:bg-purple-900/20 rounded-full border border-purple-200 dark:border-purple-800 w-fit mx-auto hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors cursor-pointer"
             >
               <span className="material-symbols-outlined text-purple-600 dark:text-purple-400 text-base">emoji_events</span>
@@ -265,7 +289,7 @@ function TournamentDetail({ currentUser }) {
         <div className="p-1 bg-slate-100 dark:bg-slate-800 rounded-3xl flex">
         <button
           onClick={() => setActiveTab('group')}
-          className={`flex-1 text-center py-1.5 px-3 rounded-2xl text-xs font-semibold cursor-pointer transition-colors duration-300 ${
+          className={`flex-1 text-center py-2.5 px-4 rounded-2xl text-sm font-semibold cursor-pointer transition-colors duration-300 ${
             activeTab === 'group'
               ? 'bg-indigo-600 text-white'
               : 'text-slate-600 dark:text-slate-300'
@@ -275,7 +299,7 @@ function TournamentDetail({ currentUser }) {
         </button>
         <button
           onClick={() => canAccessPlayoffs && setActiveTab('playoffs')}
-          className={`flex-1 py-1.5 px-2 rounded-2xl text-xs font-semibold transition-all duration-300 flex flex-col items-center justify-center ${
+          className={`flex-1 py-2.5 px-3 rounded-2xl text-sm font-semibold transition-all duration-300 flex flex-col items-center justify-center ${
             activeTab === 'playoffs'
               ? 'bg-indigo-600 text-white shadow-md'
               : canAccessPlayoffs
@@ -284,14 +308,14 @@ function TournamentDetail({ currentUser }) {
           }`}
         >
           <div className="flex items-center gap-1">
-            {!canAccessPlayoffs && <span className="material-symbols-outlined text-xs">lock</span>}
+            {!canAccessPlayoffs && <span className="material-symbols-outlined text-sm">lock</span>}
             {canAccessPlayoffs && activeTab !== 'playoffs' && (
-              <span className="material-symbols-outlined text-xs">emoji_events</span>
+              <span className="material-symbols-outlined text-sm">emoji_events</span>
             )}
             <span>Playoffs</span>
           </div>
           {!canAccessPlayoffs && remainingGroupMatches > 0 && (
-            <span className="text-[9px] opacity-75 mt-0.5">{remainingGroupMatches} match{remainingGroupMatches !== 1 ? 'es' : ''} left</span>
+            <span className="text-[10px] opacity-75 mt-0.5">{remainingGroupMatches} match{remainingGroupMatches !== 1 ? 'es' : ''} left</span>
           )}
         </button>
         </div>

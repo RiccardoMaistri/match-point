@@ -129,7 +129,14 @@ function App() {
 
   useEffect(() => {
     if (currentUser && tournaments.length > 0 && location.pathname === '/') {
-      navigate(`/tournaments/${tournaments[0].id}`, { replace: true });
+      const lastTournamentId = localStorage.getItem('lastTournamentId');
+      const lastTournamentPath = localStorage.getItem('lastTournamentPath');
+      
+      if (lastTournamentId && tournaments.some(t => t.id === lastTournamentId) && lastTournamentPath) {
+        navigate(lastTournamentPath, { replace: true });
+      } else {
+        navigate(`/tournaments/${tournaments[0].id}`, { replace: true });
+      }
     }
   }, [currentUser, tournaments, location.pathname, navigate]);
 
@@ -200,11 +207,6 @@ function App() {
     return children;
   };
 
-
-  if (isInitializing) {
-    return <p className="text-center py-10">Initializing app...</p>;
-  }
-
   const getCurrentTournamentId = () => {
     if (location.pathname.startsWith('/tournaments/')) {
       return location.pathname.split('/')[2];
@@ -231,6 +233,18 @@ function App() {
       navigate(`/tournaments/${tournamentId}`);
     }
   };
+
+  // Save current tournament page to localStorage
+  useEffect(() => {
+    if (currentTournamentId) {
+      localStorage.setItem('lastTournamentId', currentTournamentId);
+      localStorage.setItem('lastTournamentPath', location.pathname);
+    }
+  }, [currentTournamentId, location.pathname]);
+
+  if (isInitializing) {
+    return <p className="text-center py-10">Initializing app...</p>;
+  }
 
   return (
     <div className="relative flex size-full min-h-screen flex-col justify-between group/design-root overflow-x-hidden bg-background-light dark:bg-background-dark">
