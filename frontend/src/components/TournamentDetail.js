@@ -101,8 +101,8 @@ function TournamentDetail({ currentUser }) {
 
   const isOwner = currentUser && tournament && tournament.user_id === currentUser.id;
   const canGenerateMatches = tournament?.tournament_type === 'double' 
-    ? participants.length >= 4 && participants.length % 2 === 0 && participants.length >= tournament.playoff_participants * 2
-    : participants.length >= 2 && participants.length >= tournament.playoff_participants;
+    ? (tournament.teams?.length || 0) >= 4
+    : participants.length >= 4 && participants.length >= tournament.playoff_participants;
 
   const getParticipantName = (participantId, match = null) => {
     if (!participantId && match?.is_bye) {
@@ -450,8 +450,8 @@ function TournamentDetail({ currentUser }) {
               <span className="material-symbols-outlined text-slate-400 dark:text-slate-500 text-lg">group_add</span>
               <p className="text-sm text-slate-600 dark:text-slate-400">
                 {tournament?.tournament_type === 'double' 
-                  ? 'Add at least 4 participants (even number) to start'
-                  : 'Add at least 2 participants to start'
+                  ? 'Form at least 4 teams to start the tournament'
+                  : 'Add at least 4 participants to start'
                 }
               </p>
             </div>

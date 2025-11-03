@@ -63,6 +63,7 @@ const Standings = ({ tournaments }) => {
           <Leaderboard 
             participants={participants} 
             matches={matches} 
+            tournament={currentTournament}
             playoffParticipants={currentTournament.playoff_participants || 4}
           />
         </div>

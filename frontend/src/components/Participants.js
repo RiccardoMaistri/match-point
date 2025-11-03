@@ -169,14 +169,16 @@ function Participants({ currentUser }) {
                   <span className="material-symbols-outlined text-green-600 dark:text-green-400">group</span>
                   <h3 className="font-semibold text-green-800 dark:text-green-300">Your Team</h3>
                 </div>
-                <button
-                  onClick={() => handleDeleteTeam(currentUserTeam.id)}
-                  disabled={isCreatingTeam}
-                  className="w-6 h-6 flex items-center justify-center text-red-500 hover:bg-red-100 dark:hover:bg-red-500/10 rounded-full transition-colors disabled:opacity-50"
-                  title="Leave team"
-                >
-                  <span className="material-symbols-outlined text-sm">close</span>
-                </button>
+                {tournament?.status === 'open' && (
+                  <button
+                    onClick={() => handleDeleteTeam(currentUserTeam.id)}
+                    disabled={isCreatingTeam}
+                    className="w-6 h-6 flex items-center justify-center text-red-500 hover:bg-red-100 dark:hover:bg-red-500/10 rounded-full transition-colors disabled:opacity-50"
+                    title="Leave team"
+                  >
+                    <span className="material-symbols-outlined text-sm">close</span>
+                  </button>
+                )}
               </div>
               <div className="flex items-center gap-3">
                 {[currentUserTeam.player1_id, currentUserTeam.player2_id].map(playerId => {
