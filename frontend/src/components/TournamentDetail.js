@@ -14,7 +14,10 @@ function TournamentDetail({ currentUser }) {
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
   const [currentMatchForResult, setCurrentMatchForResult] = useState(null);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
-  const [activeTab, setActiveTab] = useState('group');
+  const [activeTab, setActiveTab] = useState(() => {
+    const saved = localStorage.getItem(`tournament-${tournamentId}-tab`);
+    return saved || 'group';
+  });
   const [allMatchesOpen, setAllMatchesOpen] = useState(false);
 
   const fetchTournamentData = useCallback(async () => {
@@ -70,10 +73,15 @@ function TournamentDetail({ currentUser }) {
 
   const handleSubmitMatchResult = async (tournamentId, matchId, resultData) => {
     try {
-      await api.recordMatchResult(tournamentId, matchId, resultData);
+      const response = await api.recordMatchResult(tournamentId, matchId, resultData);
       await fetchTournamentData();
       setIsResultModalOpen(false);
       setCurrentMatchForResult(null);
+      
+      // Show winner notification if tournament is completed
+      if (response.tournament_winner) {
+        alert(`🏆 ${response.tournament_winner.name} wins the tournament! 🏆`);
+      }
     } catch (err) {
       setError(err.message || 'Failed to record match result.');
     }
@@ -92,17 +100,67 @@ function TournamentDetail({ currentUser }) {
   }
 
   const isOwner = currentUser && tournament && tournament.user_id === currentUser.id;
-  const canGenerateMatches = participants.length >= 2 && participants.length >= tournament.playoff_participants;
+  const canGenerateMatches = tournament?.tournament_type === 'double' 
+    ? participants.length >= 4 && participants.length % 2 === 0 && participants.length >= tournament.playoff_participants * 2
+    : participants.length >= 2 && participants.length >= tournament.playoff_participants;
 
-  const getParticipantName = (participantId) => {
-    const participant = participants?.find(p => p.id === participantId);
-    return participant?.name || 'Unknown';
+  const getParticipantName = (participantId, match = null) => {
+    if (!participantId && match?.is_bye) {
+      return 'Bye';
+    }
+    
+    if (tournament?.tournament_type === 'double') {
+      // For doubles, participantId is actually teamId
+      const team = tournament.teams?.find(t => t.id === participantId);
+      if (!team) return 'Unknown';
+      
+      const player1 = participants?.find(p => p.id === team.player1_id);
+      const player2 = participants?.find(p => p.id === team.player2_id);
+      
+      const getName = (p) => {
+        if (!p) return 'Unknown';
+        if (p.name && p.name !== p.email) return p.name;
+        return p.email ? p.email.split('@')[0] : 'Unknown';
+      };
+      
+      return `${getName(player1)} / ${getName(player2)}`;
+    } else {
+      // Singles logic
+      const participant = participants?.find(p => p.id === participantId);
+      if (!participant) return 'Unknown';
+      
+      if (participant.name && participant.name !== participant.email) {
+        return participant.name;
+      }
+      return participant.email ? participant.email.split('@')[0] : 'Unknown';
+    }
   };
 
   const myMatches = matches.filter(m => {
-    const p1 = participants.find(p => p.id === m.participant1_id);
-    const p2 = participants.find(p => p.id === m.participant2_id);
-    return currentUser && (p1?.email === currentUser.email || p2?.email === currentUser.email);
+    if (!currentUser) return false;
+    
+    if (tournament?.tournament_type === 'double') {
+      // For doubles, check if user is in either team
+      const team1 = tournament.teams?.find(t => t.id === m.participant1_id);
+      const team2 = tournament.teams?.find(t => t.id === m.participant2_id);
+      
+      const isInTeam1 = team1 && (
+        participants.find(p => p.id === team1.player1_id)?.email === currentUser.email ||
+        participants.find(p => p.id === team1.player2_id)?.email === currentUser.email
+      );
+      
+      const isInTeam2 = team2 && (
+        participants.find(p => p.id === team2.player1_id)?.email === currentUser.email ||
+        participants.find(p => p.id === team2.player2_id)?.email === currentUser.email
+      );
+      
+      return isInTeam1 || isInTeam2;
+    } else {
+      // Singles logic
+      const p1 = participants.find(p => p.id === m.participant1_id);
+      const p2 = participants.find(p => p.id === m.participant2_id);
+      return p1?.email === currentUser.email || p2?.email === currentUser.email;
+    }
   });
 
   const groupMatches = matches.filter(m => m.phase === 'group');
@@ -115,10 +173,32 @@ function TournamentDetail({ currentUser }) {
   const renderMatch = (match, showRecordButton = true) => {
     const p1 = participants.find(p => p.id === match.participant1_id);
     const p2 = participants.find(p => p.id === match.participant2_id);
-    const isUserMatch = currentUser && (p1?.email === currentUser.email || p2?.email === currentUser.email);
+    let isUserMatch = false;
+    if (currentUser) {
+      if (tournament?.tournament_type === 'double') {
+        const team1 = tournament.teams?.find(t => t.id === match.participant1_id);
+        const team2 = tournament.teams?.find(t => t.id === match.participant2_id);
+        
+        const isInTeam1 = team1 && (
+          participants.find(p => p.id === team1.player1_id)?.email === currentUser.email ||
+          participants.find(p => p.id === team1.player2_id)?.email === currentUser.email
+        );
+        
+        const isInTeam2 = team2 && (
+          participants.find(p => p.id === team2.player1_id)?.email === currentUser.email ||
+          participants.find(p => p.id === team2.player2_id)?.email === currentUser.email
+        );
+        
+        isUserMatch = isInTeam1 || isInTeam2;
+      } else {
+        const p1 = participants.find(p => p.id === match.participant1_id);
+        const p2 = participants.find(p => p.id === match.participant2_id);
+        isUserMatch = p1?.email === currentUser.email || p2?.email === currentUser.email;
+      }
+    }
     const isCompleted = match.status === 'completed';
-    const p1Name = getParticipantName(match.participant1_id);
-    const p2Name = getParticipantName(match.participant2_id);
+    const p1Name = getParticipantName(match.participant1_id, match);
+    const p2Name = getParticipantName(match.participant2_id, match);
     const canRecordResult = match.phase === 'playoff' ? isUserMatch : showRecordButton;
 
     const p1Sets = [];
@@ -235,6 +315,21 @@ function TournamentDetail({ currentUser }) {
                     <span className="font-medium text-green-800 dark:text-green-300">Round complete</span>
                   </div>
                 )}
+                {allCompleted && Number(roundNum) === maxRound && (() => {
+                  const finalMatch = roundMatches[0];
+                  const winner = finalMatch?.winner_id ? participants.find(p => p.id === finalMatch.winner_id) : null;
+                  return winner ? (
+                    <div className="border-t border-gray-200 dark:border-border-dark">
+                      <div className="p-4">
+                        <div className="bg-gradient-to-r from-yellow-400 to-orange-500 p-4 rounded-3xl shadow-lg text-center">
+                          <div className="text-3xl mb-2">🏆</div>
+                          <div className="text-white font-bold text-lg mb-1">Tournament Winner</div>
+                          <div className="text-white/90 text-xl font-semibold">{winner.name}</div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null;
+                })()}
               </div>
             </div>
           );
@@ -276,10 +371,15 @@ function TournamentDetail({ currentUser }) {
             </div>
           )
         )}
-        {playoffsStarted && (
+        {playoffsStarted && tournament.status !== 'completed' && (
           <div className="flex items-center justify-center gap-2 mb-2 px-4 py-2 bg-purple-50/50 dark:bg-purple-900/20 rounded-full border border-purple-200 dark:border-purple-800 w-fit mx-auto">
-            <span className="material-symbols-outlined text-purple-600 dark:text-purple-400 text-base">emoji_events</span>
-            <span className="text-sm font-medium text-purple-800 dark:text-purple-300">Playoffs are about to start</span>
+            <span className="text-sm font-medium text-purple-800 dark:text-purple-300">Playoff on going</span>
+          </div>
+        )}
+        {tournament.status === 'completed' && (
+          <div className="flex items-center justify-center gap-2 mb-2 px-4 py-2 bg-yellow-50/50 dark:bg-yellow-900/20 rounded-full border border-yellow-200 dark:border-yellow-800 w-fit mx-auto">
+            <span className="material-symbols-outlined text-yellow-600 dark:text-yellow-400 text-base">emoji_events</span>
+            <span className="text-sm font-medium text-yellow-800 dark:text-yellow-300">Tournament Completed</span>
           </div>
         )}
       </div>
@@ -288,7 +388,10 @@ function TournamentDetail({ currentUser }) {
       <div className="px-3 pb-3">
         <div className="p-1 bg-slate-100 dark:bg-slate-800 rounded-3xl flex">
         <button
-          onClick={() => setActiveTab('group')}
+          onClick={() => {
+            setActiveTab('group');
+            localStorage.setItem(`tournament-${tournamentId}-tab`, 'group');
+          }}
           className={`flex-1 text-center py-2.5 px-4 rounded-2xl text-sm font-semibold cursor-pointer transition-colors duration-300 ${
             activeTab === 'group'
               ? 'bg-indigo-600 text-white'
@@ -298,7 +401,12 @@ function TournamentDetail({ currentUser }) {
           Group Stage
         </button>
         <button
-          onClick={() => canAccessPlayoffs && setActiveTab('playoffs')}
+          onClick={() => {
+            if (canAccessPlayoffs) {
+              setActiveTab('playoffs');
+              localStorage.setItem(`tournament-${tournamentId}-tab`, 'playoffs');
+            }
+          }}
           className={`flex-1 py-2.5 px-3 rounded-2xl text-sm font-semibold transition-all duration-300 flex flex-col items-center justify-center ${
             activeTab === 'playoffs'
               ? 'bg-indigo-600 text-white shadow-md'
@@ -321,6 +429,8 @@ function TournamentDetail({ currentUser }) {
         </div>
       </div>
 
+
+
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto px-3">
         {/* Group Stage Tab */}
@@ -338,7 +448,12 @@ function TournamentDetail({ currentUser }) {
           {!canGenerateMatches && tournament.status === 'open' && isOwner && (
             <div className="flex items-center gap-2 px-4 py-3 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-200 dark:border-slate-700">
               <span className="material-symbols-outlined text-slate-400 dark:text-slate-500 text-lg">group_add</span>
-              <p className="text-sm text-slate-600 dark:text-slate-400">Add at least 2 participants to start</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                {tournament?.tournament_type === 'double' 
+                  ? 'Add at least 4 participants (even number) to start'
+                  : 'Add at least 2 participants to start'
+                }
+              </p>
             </div>
           )}
 
@@ -413,6 +528,7 @@ function TournamentDetail({ currentUser }) {
           participants={participants}
           onSubmitResult={handleSubmitMatchResult}
           tournamentId={tournament.id}
+          tournament={tournament}
         />
       )}
       <ConfirmModal

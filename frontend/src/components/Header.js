@@ -46,7 +46,7 @@ const Header = ({ title, tournaments, currentTournamentId, onTournamentChange, o
               </div>
               {currentTournament && (
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {currentTournament.format.replace('_', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')} · {currentTournament.participants?.length || 0} player{currentTournament.participants?.length !== 1 ? 's' : ''}
+                  {currentTournament.tournament_type === 'double' ? 'Doubles' : 'Singles'} · {currentTournament.format.replace('_', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')} · {currentTournament.participants?.length || 0} player{currentTournament.participants?.length !== 1 ? 's' : ''}
                 </p>
               )}
             </>
@@ -75,12 +75,33 @@ const Header = ({ title, tournaments, currentTournamentId, onTournamentChange, o
               <span className="material-symbols-outlined">close</span>
             </button>
           </div>
-          <textarea
-            value={feedback}
-            onChange={(e) => setFeedback(e.target.value)}
-            placeholder="Tell us what you think..."
-            className="w-full h-32 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50"
-          />
+          <div className="space-y-4">
+            <div>
+              <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Send feedback via email:</h4>
+              <a
+                href="mailto:feedback@matchpoint.com?subject=Match Point Feedback"
+                className="flex items-center justify-center gap-2 w-full px-4 py-2 text-sm font-semibold text-primary bg-primary/10 rounded-2xl hover:bg-primary/20 transition-colors"
+              >
+                <span className="material-symbols-outlined text-base">email</span>
+                Send Email
+              </a>
+            </div>
+            
+            <div className="text-center">
+              <span className="text-sm text-slate-500 dark:text-slate-400">OR</span>
+            </div>
+            
+            <div>
+              <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Send feedback via form:</h4>
+              <textarea
+                value={feedback}
+                onChange={(e) => setFeedback(e.target.value)}
+                placeholder="Tell us what you think..."
+                className="w-full h-32 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50"
+              />
+            </div>
+          </div>
+          
           <div className="flex gap-3 mt-4">
             <button
               onClick={() => setShowFeedback(false)}
@@ -93,7 +114,7 @@ const Header = ({ title, tournaments, currentTournamentId, onTournamentChange, o
               disabled={!feedback.trim() || isSubmitting}
               className="flex-1 px-4 py-2 text-sm font-semibold text-white bg-primary rounded-2xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isSubmitting ? 'Sending...' : 'Send'}
+              {isSubmitting ? 'Sending...' : 'Send Form'}
             </button>
           </div>
         </div>

@@ -108,7 +108,9 @@ function TournamentForm({ onSubmit, initialData = null, onCancel }) {
                 className={inputClasses}
               >
                 <option value="4">4 Players</option>
+                <option value="5">5 Players</option>
                 <option value="6">6 Players</option>
+                <option value="7">7 Players</option>
                 <option value="8">8 Players</option>
               </select>
             </div>

@@ -2,15 +2,29 @@ from models import Tournament
 
 def _calculate_standings(tournament: Tournament) -> list:
     standings = {}
-    for p in tournament.participants:
-        standings[p.id] = {
-            "participant": p,
-            "played": 0,
-            "wins": 0,
-            "losses": 0,
-            "score_for": 0,
-            "score_against": 0,
-        }
+    
+    if tournament.tournament_type == "double":
+        # For doubles, calculate standings for teams
+        for team in tournament.teams:
+            standings[team.id] = {
+                "participant": team,  # This will be a team object
+                "played": 0,
+                "wins": 0,
+                "losses": 0,
+                "score_for": 0,
+                "score_against": 0,
+            }
+    else:
+        # For singles, calculate standings for participants
+        for p in tournament.participants:
+            standings[p.id] = {
+                "participant": p,
+                "played": 0,
+                "wins": 0,
+                "losses": 0,
+                "score_for": 0,
+                "score_against": 0,
+            }
     
     for match in tournament.matches:
         if match.phase == 'group' and match.status == 'completed':

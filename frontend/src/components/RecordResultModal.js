@@ -4,7 +4,7 @@ const getParticipantById = (participantId, participants) => {
   return participants.find(p => p.id === participantId);
 };
 
-function RecordResultModal({ isOpen, onClose, match, participants, onSubmitResult, tournamentId }) {
+function RecordResultModal({ isOpen, onClose, match, participants, onSubmitResult, tournamentId, tournament }) {
   const [scores, setScores] = useState({
     score1_set1: '',
     score2_set1: '',
@@ -15,8 +15,30 @@ function RecordResultModal({ isOpen, onClose, match, participants, onSubmitResul
   });
   const [error, setError] = useState('');
 
-  const participant1 = match ? getParticipantById(match.participant1_id, participants) : null;
-  const participant2 = match ? getParticipantById(match.participant2_id, participants) : null;
+  const getDisplayName = (participantId) => {
+    if (!participantId) return null;
+    
+    if (tournament?.tournament_type === 'double') {
+      const team = tournament.teams?.find(t => t.id === participantId);
+      if (!team) return null;
+      
+      const player1 = participants?.find(p => p.id === team.player1_id);
+      const player2 = participants?.find(p => p.id === team.player2_id);
+      
+      const getName = (p) => {
+        if (!p) return 'Unknown';
+        if (p.name && p.name !== p.email) return p.name;
+        return p.email ? p.email.split('@')[0] : 'Unknown';
+      };
+      
+      return { name: `${getName(player1)} / ${getName(player2)}` };
+    } else {
+      return getParticipantById(participantId, participants);
+    }
+  };
+  
+  const participant1 = match ? getDisplayName(match.participant1_id) : null;
+  const participant2 = match ? getDisplayName(match.participant2_id) : null;
 
   useEffect(() => {
     if (match) {

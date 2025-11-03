@@ -14,6 +14,7 @@ from models import (
     Match,
     MatchResult,
     Participant,
+    Team,
     Tournament,
     TournamentCreate,
     User,
@@ -111,12 +112,33 @@ async def get_tournament(
             current_round_matches = rounds[max_round]
             
             if all(m.status == 'completed' for m in current_round_matches):
-                winners = [m.winner_id for m in current_round_matches if m.winner_id and not m.is_bye]
+                winners = [m.winner_id for m in current_round_matches if m.winner_id]
                 
-                if len(winners) == 1:
-                    tournament.status = 'completed'
+                if len(winners) == 2:
+                    # Generate final match
+                    next_round = max_round + 1
+                    match_num = max(m.match_number for m in tournament.matches) + 1
+                    
+                    final_match = Match(
+                        participant1_id=winners[0],
+                        participant2_id=winners[1],
+                        match_number=match_num,
+                        round_number=next_round,
+                        phase='playoff',
+                    )
+                    tournament.matches.append(final_match)
                     update_tournament_db(tournament_id, tournament.model_dump(mode='json'))
-                elif len(winners) > 1:
+                elif len(winners) == 1:
+                    tournament.status = 'completed'
+                    # Find and display the winner
+                    winner = next(
+                        (p for p in tournament.participants if p.id == winners[0]),
+                        None,
+                    )
+                    if winner:
+                        print(f"🏆 TOURNAMENT WINNER: {winner.name} 🏆")
+                    update_tournament_db(tournament_id, tournament.model_dump(mode='json'))
+                elif len(winners) > 2:
                     next_round = max_round + 1
                     match_num = max(m.match_number for m in tournament.matches) + 1
                     
@@ -128,6 +150,20 @@ async def get_tournament(
                                 match_number=match_num,
                                 round_number=next_round,
                                 phase='playoff',
+                            )
+                            tournament.matches.append(new_match)
+                            match_num += 1
+                        else:
+                            # Odd number of winners, create bye match
+                            new_match = Match(
+                                participant1_id=winners[i],
+                                participant2_id=None,
+                                match_number=match_num,
+                                round_number=next_round,
+                                phase='playoff',
+                                is_bye=True,
+                                winner_id=winners[i],
+                                status='completed'
                             )
                             tournament.matches.append(new_match)
                             match_num += 1
@@ -370,40 +406,94 @@ async def generate_matches_for_tournament(
     tournament.registration_open = False
     
     if tournament.format == "round_robin":
-        participants = tournament.participants[:]
-        num_participants = len(participants)
-        
-        total_matches = (num_participants * (num_participants - 1)) // 2
-        matches_per_day = num_participants // 2
-        tournament.total_matchdays = (total_matches + matches_per_day - 1) // matches_per_day
-        
-        if num_participants % 2 == 1:
-            participants.append(None)
-            num_participants += 1
-        
-        match_num = 1
-        
-        for matchday in range(num_participants - 1):
+        if tournament.tournament_type == "double":
+            # For doubles, create teams from participants (pairs)
+            participants = tournament.participants[:]
+            if len(participants) % 2 != 0:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Doubles tournaments require an even number of participants.",
+                )
             
-            for i in range(num_participants // 2):
-                p1_idx = i
-                p2_idx = num_participants - 1 - i
-                
-                p1 = participants[p1_idx]
-                p2 = participants[p2_idx]
-                
-                if p1 is not None and p2 is not None:
-                    match = Match(
-                        participant1_id=p1.id,
-                        participant2_id=p2.id,
-                        match_number=match_num,
-                        match_day=matchday + 1,
-                        phase='group',
-                    )
-                    tournament.matches.append(match)
-                    match_num += 1
+            # Create teams from consecutive pairs of participants
+            tournament.teams = []
+            for i in range(0, len(participants), 2):
+                team = Team(
+                    player1_id=participants[i].id,
+                    player2_id=participants[i + 1].id,
+                    name=f"{participants[i].name} / {participants[i + 1].name}"
+                )
+                tournament.teams.append(team)
             
-            participants = [participants[0]] + [participants[-1]] + participants[1:-1]
+            # Generate matches between teams
+            teams = tournament.teams[:]
+            num_teams = len(teams)
+            
+            total_matches = (num_teams * (num_teams - 1)) // 2
+            matches_per_day = num_teams // 2
+            tournament.total_matchdays = (total_matches + matches_per_day - 1) // matches_per_day
+            
+            if num_teams % 2 == 1:
+                teams.append(None)
+                num_teams += 1
+            
+            match_num = 1
+            
+            for matchday in range(num_teams - 1):
+                for i in range(num_teams // 2):
+                    t1_idx = i
+                    t2_idx = num_teams - 1 - i
+                    
+                    t1 = teams[t1_idx]
+                    t2 = teams[t2_idx]
+                    
+                    if t1 is not None and t2 is not None:
+                        match = Match(
+                            participant1_id=t1.id,  # team1_id
+                            participant2_id=t2.id,  # team2_id
+                            match_number=match_num,
+                            match_day=matchday + 1,
+                            phase='group',
+                        )
+                        tournament.matches.append(match)
+                        match_num += 1
+                
+                teams = [teams[0]] + [teams[-1]] + teams[1:-1]
+        else:
+            # Singles logic
+            participants = tournament.participants[:]
+            num_participants = len(participants)
+            
+            total_matches = (num_participants * (num_participants - 1)) // 2
+            matches_per_day = num_participants // 2
+            tournament.total_matchdays = (total_matches + matches_per_day - 1) // matches_per_day
+            
+            if num_participants % 2 == 1:
+                participants.append(None)
+                num_participants += 1
+            
+            match_num = 1
+            
+            for matchday in range(num_participants - 1):
+                for i in range(num_participants // 2):
+                    p1_idx = i
+                    p2_idx = num_participants - 1 - i
+                    
+                    p1 = participants[p1_idx]
+                    p2 = participants[p2_idx]
+                    
+                    if p1 is not None and p2 is not None:
+                        match = Match(
+                            participant1_id=p1.id,
+                            participant2_id=p2.id,
+                            match_number=match_num,
+                            match_day=matchday + 1,
+                            phase='group',
+                        )
+                        tournament.matches.append(match)
+                        match_num += 1
+                
+                participants = [participants[0]] + [participants[-1]] + participants[1:-1]
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -475,20 +565,40 @@ async def record_match_result(
             detail="Cannot record result for a bye match",
         )
 
-    participant1 = next(
-        (p for p in tournament.participants if p.id == match_to_update.participant1_id),
-        None,
-    )
-    participant2 = next(
-        (p for p in tournament.participants if p.id == match_to_update.participant2_id),
-        None,
-    )
-
+    # Check authorization based on tournament type
     participant_emails = []
-    if participant1:
-        participant_emails.append(participant1.email)
-    if participant2:
-        participant_emails.append(participant2.email)
+    
+    if tournament.tournament_type == "double":
+        # For doubles, check if user is in either team
+        team1 = next((t for t in tournament.teams if t.id == match_to_update.participant1_id), None)
+        team2 = next((t for t in tournament.teams if t.id == match_to_update.participant2_id), None)
+        
+        if team1:
+            p1_1 = next((p for p in tournament.participants if p.id == team1.player1_id), None)
+            p1_2 = next((p for p in tournament.participants if p.id == team1.player2_id), None)
+            if p1_1: participant_emails.append(p1_1.email)
+            if p1_2: participant_emails.append(p1_2.email)
+        
+        if team2:
+            p2_1 = next((p for p in tournament.participants if p.id == team2.player1_id), None)
+            p2_2 = next((p for p in tournament.participants if p.id == team2.player2_id), None)
+            if p2_1: participant_emails.append(p2_1.email)
+            if p2_2: participant_emails.append(p2_2.email)
+    else:
+        # For singles
+        participant1 = next(
+            (p for p in tournament.participants if p.id == match_to_update.participant1_id),
+            None,
+        )
+        participant2 = next(
+            (p for p in tournament.participants if p.id == match_to_update.participant2_id),
+            None,
+        )
+        
+        if participant1:
+            participant_emails.append(participant1.email)
+        if participant2:
+            participant_emails.append(participant2.email)
 
     if current_user.email not in participant_emails and current_user.id != tournament.user_id:
         raise HTTPException(
@@ -541,11 +651,31 @@ async def record_match_result(
         
         if all(m.status == 'completed' for m in current_round_matches):
             sorted_round_matches = sorted(current_round_matches, key=lambda m: m.match_number)
-            winners = [m.winner_id for m in sorted_round_matches if m.winner_id and not m.is_bye]
+            winners = [m.winner_id for m in sorted_round_matches if m.winner_id]
             
-            if len(winners) == 1:
+            if len(winners) == 2:
+                # Generate final match
+                next_round_number = current_round + 1
+                match_num = max(m.match_number for m in tournament.matches) + 1
+                
+                final_match = Match(
+                    participant1_id=winners[0],
+                    participant2_id=winners[1],
+                    match_number=match_num,
+                    round_number=next_round_number,
+                    phase='playoff',
+                )
+                tournament.matches.append(final_match)
+            elif len(winners) == 1:
                 tournament.status = "completed"
-            elif len(winners) > 1:
+                # Find and display the winner
+                winner = next(
+                    (p for p in tournament.participants if p.id == winners[0]),
+                    None,
+                )
+                if winner:
+                    print(f"🏆 TOURNAMENT WINNER: {winner.name} 🏆")
+            elif len(winners) > 2:
                 next_round_number = current_round + 1
                 match_num = max(m.match_number for m in tournament.matches) + 1
                 
@@ -560,9 +690,40 @@ async def record_match_result(
                         )
                         tournament.matches.append(new_match)
                         match_num += 1
+                    else:
+                        # Odd number of winners, create bye match
+                        new_match = Match(
+                            participant1_id=winners[i],
+                            participant2_id=None,
+                            match_number=match_num,
+                            round_number=next_round_number,
+                            phase='playoff',
+                            is_bye=True,
+                            winner_id=winners[i],
+                            status='completed'
+                        )
+                        tournament.matches.append(new_match)
+                        match_num += 1
 
+    # Check if tournament was just completed and return winner info
+    response_data = {"match": match_to_update}
+    if tournament.status == "completed":
+        playoff_matches = [m for m in tournament.matches if m.phase == 'playoff']
+        if playoff_matches:
+            final_match = max(playoff_matches, key=lambda m: m.round_number or 0)
+            if final_match.winner_id:
+                winner = next(
+                    (p for p in tournament.participants if p.id == final_match.winner_id),
+                    None,
+                )
+                if winner:
+                    response_data["tournament_winner"] = {
+                        "name": winner.name,
+                        "message": f"🏆 {winner.name} wins the tournament! 🏆"
+                    }
+    
     update_tournament_db(tournament_id, tournament.model_dump())
-    return match_to_update
+    return response_data if "tournament_winner" in response_data else match_to_update
 
 
 @router.get(
