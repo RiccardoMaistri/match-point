@@ -200,4 +200,15 @@ export const submitFeedback = async (feedbackText) => {
   return authenticatedFetch(`${API_BASE_URL}/feedback/`, 'POST', { feedback: feedbackText });
 };
 
+export const createTeam = async (tournamentId, player1Id, player2Id) => {
+  return authenticatedFetch(`${API_BASE_URL}/tournaments/${tournamentId}/teams/`, 'POST', {
+    player1_id: player1Id,
+    player2_id: player2Id
+  });
+};
+
+export const deleteTeam = async (tournamentId, teamId) => {
+  return authenticatedFetch(`${API_BASE_URL}/tournaments/${tournamentId}/teams/${teamId}`, 'DELETE');
+};
+
 export { API_BASE_URL };

@@ -904,3 +904,151 @@ async def get_tournament_results(
             })
 
     return results
+
+
+@router.post(
+    "/{tournament_id}/teams/",
+    response_model=Team,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a team for doubles tournament",
+)
+async def create_team(
+    tournament_id: str = Path(..., description="ID of the tournament"),
+    team_data: dict = Body(..., description="Team data with player1_id and player2_id"),
+    current_user: User = Depends(get_current_active_user),
+):
+    tournament_dict = get_tournament_db(tournament_id)
+    if not tournament_dict:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found"
+        )
+
+    tournament = Tournament(**tournament_dict)
+
+    if tournament.tournament_type != "double":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Teams can only be created for doubles tournaments",
+        )
+
+    if tournament.status != "open":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot create teams after tournament has started",
+        )
+
+    player1_id = team_data.get("player1_id")
+    player2_id = team_data.get("player2_id")
+
+    if not player1_id or not player2_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Both player1_id and player2_id are required",
+        )
+
+    # Verify both players are participants
+    player1 = next((p for p in tournament.participants if p.id == player1_id), None)
+    player2 = next((p for p in tournament.participants if p.id == player2_id), None)
+
+    if not player1 or not player2:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="One or both players not found in tournament",
+        )
+
+    # Check if current user is one of the players
+    if current_user.email != player1.email and current_user.email != player2.email:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only create teams that include yourself",
+        )
+
+    # Check if either player is already in a team
+    existing_teams = tournament.teams or []
+    for team in existing_teams:
+        if team.player1_id == player1_id or team.player2_id == player1_id or \
+           team.player1_id == player2_id or team.player2_id == player2_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="One or both players are already in a team",
+            )
+
+    # Create new team
+    new_team = Team(
+        player1_id=player1_id,
+        player2_id=player2_id,
+        name=f"{player1.name} / {player2.name}"
+    )
+
+    if not tournament.teams:
+        tournament.teams = []
+    tournament.teams.append(new_team)
+
+    update_tournament_db(tournament_id, tournament.model_dump())
+    return new_team
+
+
+@router.delete(
+    "/{tournament_id}/teams/{team_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a team from doubles tournament",
+)
+async def delete_team(
+    tournament_id: str = Path(..., description="ID of the tournament"),
+    team_id: str = Path(..., description="ID of the team to delete"),
+    current_user: User = Depends(get_current_active_user),
+):
+    tournament_dict = get_tournament_db(tournament_id)
+    if not tournament_dict:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found"
+        )
+
+    tournament = Tournament(**tournament_dict)
+
+    if tournament.tournament_type != "double":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Teams can only be deleted from doubles tournaments",
+        )
+
+    if tournament.status != "open":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot delete teams after tournament has started",
+        )
+
+    # Find the team
+    team_to_delete = None
+    for team in tournament.teams or []:
+        if team.id == team_id:
+            team_to_delete = team
+            break
+
+    if not team_to_delete:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Team not found",
+        )
+
+    # Check if current user is in the team
+    player1 = next((p for p in tournament.participants if p.id == team_to_delete.player1_id), None)
+    player2 = next((p for p in tournament.participants if p.id == team_to_delete.player2_id), None)
+
+    if not player1 or not player2:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Team players not found",
+        )
+
+    if current_user.email != player1.email and current_user.email != player2.email:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only delete teams that include yourself",
+        )
+
+    # Remove the team
+    tournament.teams = [t for t in tournament.teams if t.id != team_id]
+
+    update_tournament_db(tournament_id, tournament.model_dump())
+    return
