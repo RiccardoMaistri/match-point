@@ -212,6 +212,12 @@ function Participants({ currentUser }) {
                   {teams.filter(t => t.id !== currentUserTeam?.id).map((team, index) => {
                     const player1 = participants.find(p => p.id === team.player1_id);
                     const player2 = participants.find(p => p.id === team.player2_id);
+                    const teamColors = [
+                      'bg-blue-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500', 
+                      'bg-pink-500', 'bg-indigo-500', 'bg-red-500', 'bg-teal-500'
+                    ];
+                    const teamColor = teamColors[index % teamColors.length];
+                    
                     return (
                       <div key={team.id} className="p-4">
                         <div className="flex items-center gap-3">
@@ -219,6 +225,9 @@ function Participants({ currentUser }) {
                             <span className="material-symbols-outlined text-primary text-xl">group</span>
                           </div>
                           <div className="flex-1">
+                            <div className="font-semibold text-slate-900 dark:text-slate-50 mb-1">
+                              Team {index + 1}
+                            </div>
                             <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
                               <span>{player1?.name !== player1?.email ? player1?.name : player1?.email?.split('@')[0]}</span>
                               <span>•</span>

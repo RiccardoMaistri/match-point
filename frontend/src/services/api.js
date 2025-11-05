@@ -197,7 +197,20 @@ export const getCurrentUserDetails = async () => {
 
 
 export const submitFeedback = async (feedbackText) => {
-  return authenticatedFetch(`${API_BASE_URL}/feedback/`, 'POST', { feedback: feedbackText });
+  const metadata = {
+    userAgent: navigator.userAgent,
+    platform: navigator.platform,
+    language: navigator.language,
+    screenResolution: `${window.screen.width}x${window.screen.height}`,
+    viewport: `${window.innerWidth}x${window.innerHeight}`,
+    timestamp: new Date().toISOString(),
+    url: window.location.href
+  };
+  
+  return authenticatedFetch(`${API_BASE_URL}/feedback/`, 'POST', { 
+    feedback: feedbackText,
+    metadata 
+  });
 };
 
 export const createTeam = async (tournamentId, player1Id, player2Id) => {

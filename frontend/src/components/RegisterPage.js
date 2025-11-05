@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import * as api from '../services/api';
 
 const RegisterPage = ({ onRegister, error, isLoading }) => {
   const [name, setName] = useState('');
@@ -8,6 +9,23 @@ const RegisterPage = ({ onRegister, error, isLoading }) => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [formError, setFormError] = useState('');
+  const [tournamentName, setTournamentName] = useState(null);
+
+  useEffect(() => {
+    const checkForTournamentInvite = async () => {
+      const postLoginRedirect = localStorage.getItem('postLoginRedirect');
+      if (postLoginRedirect && postLoginRedirect.startsWith('/join/')) {
+        const inviteCode = postLoginRedirect.split('/join/')[1];
+        try {
+          const tournament = await api.getTournamentByInviteCode(inviteCode);
+          setTournamentName(tournament.name);
+        } catch (err) {
+          console.error('Failed to fetch tournament for invite:', err);
+        }
+      }
+    };
+    checkForTournamentInvite();
+  }, []);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -30,7 +48,9 @@ const RegisterPage = ({ onRegister, error, isLoading }) => {
   return (
     <div className="max-w-md mx-auto mt-8 sm:mt-12 p-4">
       <div className="bg-background p-6 sm:p-8 rounded-3xl shadow-lg">
-        <h2 className="text-3xl font-bold text-center text-primary-text mb-6">Create Account</h2>
+        <h2 className="text-3xl font-bold text-center text-primary-text mb-6">
+          {tournamentName ? `Register to join "${tournamentName}"` : 'Create Account'}
+        </h2>
         
         {(error || formError) && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-2xl relative mb-6" role="alert">

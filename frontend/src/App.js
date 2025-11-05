@@ -12,6 +12,7 @@ import Standings from './components/Standings';
 import Participants from './components/Participants';
 import ConfirmModal from './components/ConfirmModal';
 import InstallPrompt from './components/InstallPrompt';
+import TournamentsPage from './pages/TournamentsPage';
 import * as api from './services/api';
 
 function App() {
@@ -68,9 +69,15 @@ function App() {
       localStorage.setItem('authToken', loginData.access_token);
       const userDetails = await api.getCurrentUserDetails();
       setCurrentUser(userDetails);
-      const postLoginRedirect = localStorage.getItem('postLoginRedirect') || '/';
-      localStorage.removeItem('postLoginRedirect');
-      navigate(postLoginRedirect);
+      
+      // Handle redirect immediately after login
+      const postLoginRedirect = localStorage.getItem('postLoginRedirect');
+      if (postLoginRedirect) {
+        localStorage.removeItem('postLoginRedirect');
+        navigate(postLoginRedirect, { replace: true });
+      } else {
+        navigate('/', { replace: true });
+      }
     } catch (err) {
       setAuthError(err.message || 'Failed to login');
       setCurrentUser(null);
@@ -89,9 +96,15 @@ function App() {
       localStorage.setItem('authToken', loginData.access_token);
       const userDetails = await api.getCurrentUserDetails();
       setCurrentUser(userDetails);
-      const postLoginRedirect = localStorage.getItem('postLoginRedirect') || '/';
-      localStorage.removeItem('postLoginRedirect');
-      navigate(postLoginRedirect);
+      
+      // Handle redirect immediately after register
+      const postLoginRedirect = localStorage.getItem('postLoginRedirect');
+      if (postLoginRedirect) {
+        localStorage.removeItem('postLoginRedirect');
+        navigate(postLoginRedirect, { replace: true });
+      } else {
+        navigate('/', { replace: true });
+      }
     } catch (err) {
       setAuthError(err.message || 'Failed to register');
       setCurrentUser(null);
@@ -128,17 +141,21 @@ function App() {
   }, [fetchTournaments, currentUser]);
 
   useEffect(() => {
-    if (currentUser && tournaments.length > 0 && location.pathname === '/') {
+    // Don't auto-redirect if user came from a join link or is in auth flow
+    const hasJoinRedirect = localStorage.getItem('postLoginRedirect')?.includes('/join/');
+    
+    if (currentUser && tournaments.length > 0 && location.pathname === '/' && 
+        !isAuthLoading && !hasJoinRedirect) {
       const lastTournamentId = localStorage.getItem('lastTournamentId');
       const lastTournamentPath = localStorage.getItem('lastTournamentPath');
       
       if (lastTournamentId && tournaments.some(t => t.id === lastTournamentId) && lastTournamentPath) {
         navigate(lastTournamentPath, { replace: true });
-      } else {
+      } else if (tournaments.length === 1) {
         navigate(`/tournaments/${tournaments[0].id}`, { replace: true });
       }
     }
-  }, [currentUser, tournaments, location.pathname, navigate]);
+  }, [currentUser, tournaments, location.pathname, navigate, isAuthLoading]);
 
   const handleCreateTournamentSubmit = async (tournamentData) => {
     setAppIsLoading(true);
@@ -194,16 +211,12 @@ function App() {
   };
 
   const AuthRoute = ({ children }) => {
-     console.log("AuthRoute: isInitializing", isInitializing, "currentUser", !!currentUser, "isAuthLoading", isAuthLoading, "location", location.pathname);
      if (isInitializing) {
       return <p className="text-center py-10">Initializing app...</p>;
     }
     if (currentUser && !isAuthLoading) {
-      const postLoginRedirect = localStorage.getItem('postLoginRedirect') || "/";
-      console.log("AuthRoute: Current user exists, redirecting to postLoginRedirect:", postLoginRedirect);
-      return <Navigate to={postLoginRedirect} replace />;
+      return <Navigate to="/" replace />;
     }
-    console.log("AuthRoute: No current user or auth loading, rendering children.");
     return children;
   };
 
@@ -290,7 +303,7 @@ function App() {
             } />
              <Route path="/" element={
               <ProtectedRoute>
-                <div className="text-center py-10">Loading...</div>
+                <TournamentsPage currentUser={currentUser} onCreateTournament={() => setShowCreateForm(true)} />
               </ProtectedRoute>
             } />
 

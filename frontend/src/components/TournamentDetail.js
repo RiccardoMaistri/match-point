@@ -317,14 +317,38 @@ function TournamentDetail({ currentUser }) {
                 )}
                 {allCompleted && Number(roundNum) === maxRound && (() => {
                   const finalMatch = roundMatches[0];
-                  const winner = finalMatch?.winner_id ? participants.find(p => p.id === finalMatch.winner_id) : null;
-                  return winner ? (
+                  let winnerName = null;
+                  
+                  if (finalMatch?.winner_id) {
+                    if (tournament?.tournament_type === 'double') {
+                      const winningTeam = tournament.teams?.find(t => t.id === finalMatch.winner_id);
+                      if (winningTeam) {
+                        const player1 = participants?.find(p => p.id === winningTeam.player1_id);
+                        const player2 = participants?.find(p => p.id === winningTeam.player2_id);
+                        
+                        const getName = (p) => {
+                          if (!p) return 'Unknown';
+                          if (p.name && p.name !== p.email) return p.name;
+                          return p.email ? p.email.split('@')[0] : 'Unknown';
+                        };
+                        
+                        winnerName = `${getName(player1)} / ${getName(player2)}`;
+                      }
+                    } else {
+                      const winner = participants.find(p => p.id === finalMatch.winner_id);
+                      if (winner) {
+                        winnerName = winner.name && winner.name !== winner.email ? winner.name : winner.email?.split('@')[0] || 'Unknown';
+                      }
+                    }
+                  }
+                  
+                  return winnerName ? (
                     <div className="border-t border-gray-200 dark:border-border-dark">
                       <div className="p-4">
                         <div className="bg-gradient-to-r from-yellow-400 to-orange-500 p-4 rounded-3xl shadow-lg text-center">
                           <div className="text-3xl mb-2">🏆</div>
                           <div className="text-white font-bold text-lg mb-1">Tournament Winner</div>
-                          <div className="text-white/90 text-xl font-semibold">{winner.name}</div>
+                          <div className="text-white/90 text-xl font-semibold">{winnerName}</div>
                         </div>
                       </div>
                     </div>
