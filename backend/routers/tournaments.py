@@ -339,7 +339,7 @@ async def remove_participant_from_tournament(
 
 
 @router.post(
-    "/{tournament_id}/join_authenticated",
+    "/{tournament_id}/join_authenticated", #TODO: think not working
     response_model=Participant,
     status_code=status.HTTP_201_CREATED,
     summary="Join a tournament as an authenticated user",

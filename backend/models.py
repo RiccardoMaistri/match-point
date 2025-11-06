@@ -26,8 +26,8 @@ class Match(BaseModel):
     match_number: Optional[int] = None #TODO: remove
     match_day: Optional[int] = None  # For round robin scheduling
     phase: Literal['group', 'playoff'] = 'group'  # Tournament phase
-    participant1_id: Optional[str] = None  # For singles or team1_id for doubles
-    participant2_id: Optional[str] = None  # For singles or team2_id for doubles
+    participant1_id: Optional[str] = None  # For singles player_id or team1_id for doubles
+    participant2_id: Optional[str] = None  # For singles player_id or team2_id for doubles
     winner_id: Optional[str] = None
     score_participant1: Optional[int] = None  #TODO: refactor
     score_participant2: Optional[int] = None  # Total score (sum of sets)
@@ -125,6 +125,7 @@ class Tournament(BaseModel):
     invitation_link: Optional[str] = None
     playoff_participants: int = 4
     total_matchdays: Optional[int] = None #TODO:remove
+    court_type:Literal["hard", "clay"]
 
     class Config:
         from_attributes = True
