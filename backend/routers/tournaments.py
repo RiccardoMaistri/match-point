@@ -16,7 +16,7 @@ from models import (
     Participant,
     Team,
     Tournament,
-    TournamentCreate,
+    Tournament,
     User,
 )
 from services.playoff_service import _generate_playoffs_from_standings
@@ -31,7 +31,7 @@ router = APIRouter()
     summary="Crea un nuovo torneo",
 )
 async def create_tournament(
-    tournament_payload: TournamentCreate,
+    tournament_payload: Tournament,
     current_user: User = Depends(get_current_active_user),
 ):
     new_tournament_data = Tournament(
@@ -181,7 +181,7 @@ async def get_tournament(
 )
 async def update_tournament(
     tournament_id: str = Path(..., description="ID del torneo da aggiornare"),
-    tournament_update_payload: TournamentCreate = Body(
+    tournament_update_payload: Tournament = Body(
         ..., description="Dati aggiornati del torneo"
     ),
     current_user: User = Depends(get_current_active_user),
@@ -631,8 +631,6 @@ async def record_match_result(
     # Update match status
     if match_to_update.winner_id:
         match_to_update.status = "completed"
-    elif score1 > 0 or score2 > 0:
-        match_to_update.status = "in_progress"
     else:
         match_to_update.status = "pending"
 

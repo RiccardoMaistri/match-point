@@ -14,7 +14,7 @@ from auth import (
     verify_password,
 )
 from database_adapter import get_user_by_email_db, create_user_db
-from models import User, UserCreate
+from models import User
 
 router = APIRouter()
 
@@ -80,7 +80,7 @@ async def logout(
     status_code=status.HTTP_201_CREATED,
     summary="Register a new user",
 )
-async def register_user(user_in: UserCreate):
+async def register_user(user_in: User):
     if not user_in.email:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
