@@ -11,7 +11,7 @@ function JoinTournamentPage({ currentUser, globalSetError, globalSetIsLoading, g
   const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
-    if (!currentUser || !inviteCode || isProcessing) {
+    if (!currentUser || !inviteCode) {
       return;
     }
 
@@ -22,7 +22,6 @@ function JoinTournamentPage({ currentUser, globalSetError, globalSetIsLoading, g
       setJoinMessage('Processing invitation...');
 
       try {
-        // Get tournament details
         const tourney = await api.getTournamentByInviteCode(inviteCode);
         
         if (!tourney?.id) {
@@ -36,8 +35,8 @@ function JoinTournamentPage({ currentUser, globalSetError, globalSetIsLoading, g
           return;
         }
 
-        // Check if already a participant
         const isParticipant = tourney.participants?.some(p => p.id === currentUser.id);
+        
         if (isParticipant) {
           setJoinMessage(`You are already registered for ${tourney.name}`);
           setShowSuccess(true);
@@ -47,8 +46,8 @@ function JoinTournamentPage({ currentUser, globalSetError, globalSetIsLoading, g
           return;
         }
 
-        // Join tournament
         await api.joinTournamentAuthenticated(tourney.id);
+        
         setJoinMessage(`Successfully joined ${tourney.name}!`);
         setShowSuccess(true);
         
@@ -77,7 +76,7 @@ function JoinTournamentPage({ currentUser, globalSetError, globalSetIsLoading, g
     };
 
     processInvite();
-  }, [currentUser, inviteCode]);
+  }, [currentUser, inviteCode, globalSetIsLoading, globalSetError, navigate]);
 
   if (globalIsLoading || isProcessing) {
     return (

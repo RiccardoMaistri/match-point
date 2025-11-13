@@ -81,13 +81,14 @@ function App() {
     try {
       const loginData = await api.loginUser(email, password);
       localStorage.setItem('authToken', loginData.access_token);
+      
       const userDetails = await api.getCurrentUserDetails();
       setCurrentUser(userDetails);
 
       const postLoginRedirect = localStorage.getItem('postLoginRedirect');
       if (postLoginRedirect) {
         localStorage.removeItem('postLoginRedirect');
-        navigate(postLoginRedirect);
+        navigate(postLoginRedirect, { replace: true });
       } else {
         navigate('/');
       }
@@ -113,7 +114,7 @@ function App() {
       const postLoginRedirect = localStorage.getItem('postLoginRedirect');
       if (postLoginRedirect) {
         localStorage.removeItem('postLoginRedirect');
-        navigate(postLoginRedirect);
+        navigate(postLoginRedirect, { replace: true });
       } else {
         navigate('/');
       }
@@ -155,8 +156,9 @@ function App() {
       return <p className="text-center py-10 text-white">Initializing app...</p>;
     }
     if (currentUser && !isAuthLoading) {
-      const postLoginRedirect = localStorage.getItem('postLoginRedirect');
-      return <Navigate to={postLoginRedirect || "/"} replace />;
+      // Don't redirect if user is already logged in and on auth pages
+      // Let them access login/register if they want
+      return <Navigate to="/" replace />;
     }
     return children;
   };
@@ -195,16 +197,14 @@ function App() {
           </AuthRoute>
         } />
         <Route path="/join/:inviteCode" element={
-          <JoinTournamentPage
-            currentUser={currentUser}
-            globalSetError={setAppError}
-            globalSetIsLoading={setAppIsLoading}
-            globalIsLoading={appIsLoading}
-            onLoginRequired={() => {
-              localStorage.setItem('postLoginRedirect', location.pathname + location.search);
-              navigate('/login');
-            }}
-          />
+          <ProtectedRoute>
+            <JoinTournamentPage
+              currentUser={currentUser}
+              globalSetError={setAppError}
+              globalSetIsLoading={setAppIsLoading}
+              globalIsLoading={appIsLoading}
+            />
+          </ProtectedRoute>
         } />
         <Route path="/" element={
           <ProtectedRoute>
