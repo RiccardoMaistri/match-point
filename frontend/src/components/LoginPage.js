@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import * as api from '../services/api';
 
 const LoginPage = ({ onLogin, error, isLoading }) => {
   const [usernameOrEmail, setUsernameOrEmail] = useState('');
   const [password, setPassword] = useState('');
   const [tournamentName, setTournamentName] = useState(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const from = location.state?.from?.pathname || '/';
 
   useEffect(() => {
     const checkForTournamentInvite = async () => {
-      const postLoginRedirect = localStorage.getItem('postLoginRedirect');
-      if (postLoginRedirect && postLoginRedirect.startsWith('/join/')) {
-        const inviteCode = postLoginRedirect.split('/join/')[1];
+      if (from.startsWith('/join/')) {
+        const inviteCode = from.split('/join/')[1];
         try {
           const tournament = await api.getTournamentByInviteCode(inviteCode);
           setTournamentName(tournament.name);
@@ -21,14 +24,14 @@ const LoginPage = ({ onLogin, error, isLoading }) => {
       }
     };
     checkForTournamentInvite();
-  }, []);
+  }, [from]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!usernameOrEmail || !password) {
       return;
     }
-    onLogin(usernameOrEmail, password);
+    await onLogin(usernameOrEmail, password);
   };
 
   const inputClasses = "mt-1 block w-full px-4 py-3 bg-white border border-gray-300 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary sm:text-sm";

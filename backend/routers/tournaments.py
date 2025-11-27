@@ -1,5 +1,5 @@
 import uuid
-from typing import List, Optional
+from typing import List, Optional, Dict
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, status
 
 from auth import get_current_active_user, get_optional_current_active_user
@@ -340,7 +340,7 @@ async def remove_participant_from_tournament(
 
 @router.post(
     "/{tournament_id}/join_authenticated",
-    response_model=Participant,
+    response_model=Dict,
     status_code=status.HTTP_201_CREATED,
     summary="Join a tournament as an authenticated user",
 )
@@ -364,13 +364,50 @@ async def join_tournament_authenticated(
 
     for p in tournament.participants:
         if p.email == current_user.email:
-            return p
+            return {"participant": p, "tournament_id": tournament_id}
 
     participant_name = current_user.name or current_user.email
     new_participant = Participant(name=participant_name, email=current_user.email)
     tournament.participants.append(new_participant)
     update_tournament_db(tournament_id, tournament.model_dump())
-    return new_participant
+    return {"participant": new_participant, "tournament_id": tournament_id}
+
+
+@router.post(
+    "/{tournament_id}/join",
+    response_model=Dict,
+    status_code=status.HTTP_201_CREATED,
+    summary="Join a tournament as an unauthenticated user",
+)
+async def join_tournament_unauthenticated(
+    tournament_id: str = Path(..., description="ID of the tournament to join"),
+    participant_data: Participant = Body(..., description="Participant details"),
+):
+    tournament_dict = get_tournament_db(tournament_id)
+    if not tournament_dict:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found"
+        )
+
+    tournament = Tournament(**tournament_dict)
+
+    if tournament.status != 'open':
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Registration for this tournament is closed.",
+        )
+
+    for p in tournament.participants:
+        if p.email == participant_data.email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="A participant with this email already exists in the tournament.",
+            )
+
+    new_participant = Participant(name=participant_data.name, email=participant_data.email)
+    tournament.participants.append(new_participant)
+    update_tournament_db(tournament_id, tournament.model_dump())
+    return {"participant": new_participant, "tournament_id": tournament_id}
 
 
 @router.post(

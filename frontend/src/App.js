@@ -69,19 +69,12 @@ function App() {
       localStorage.setItem('authToken', loginData.access_token);
       const userDetails = await api.getCurrentUserDetails();
       setCurrentUser(userDetails);
-      
-      // Handle redirect immediately after login
-      const postLoginRedirect = localStorage.getItem('postLoginRedirect');
-      if (postLoginRedirect) {
-        localStorage.removeItem('postLoginRedirect');
-        navigate(postLoginRedirect, { replace: true });
-      } else {
-        navigate('/', { replace: true });
-      }
+      return true;
     } catch (err) {
       setAuthError(err.message || 'Failed to login');
       setCurrentUser(null);
       localStorage.removeItem('authToken');
+      return false;
     } finally {
       setIsAuthLoading(false);
     }
@@ -96,19 +89,12 @@ function App() {
       localStorage.setItem('authToken', loginData.access_token);
       const userDetails = await api.getCurrentUserDetails();
       setCurrentUser(userDetails);
-      
-      // Handle redirect immediately after register
-      const postLoginRedirect = localStorage.getItem('postLoginRedirect');
-      if (postLoginRedirect) {
-        localStorage.removeItem('postLoginRedirect');
-        navigate(postLoginRedirect, { replace: true });
-      } else {
-        navigate('/', { replace: true });
-      }
+      return true;
     } catch (err) {
       setAuthError(err.message || 'Failed to register');
       setCurrentUser(null);
       localStorage.removeItem('authToken');
+      return false;
     } finally {
       setIsAuthLoading(false);
     }
@@ -141,11 +127,7 @@ function App() {
   }, [fetchTournaments, currentUser]);
 
   useEffect(() => {
-    // Don't auto-redirect if user came from a join link or is in auth flow
-    const hasJoinRedirect = localStorage.getItem('postLoginRedirect')?.includes('/join/');
-    
-    if (currentUser && tournaments.length > 0 && location.pathname === '/' && 
-        !isAuthLoading && !hasJoinRedirect) {
+    if (currentUser && tournaments.length > 0 && location.pathname === '/' && !isAuthLoading) {
       const lastTournamentId = localStorage.getItem('lastTournamentId');
       const lastTournamentPath = localStorage.getItem('lastTournamentPath');
       
@@ -203,8 +185,7 @@ function App() {
     }
     if (!currentUser) {
       console.log("ProtectedRoute: No current user, redirecting to /login");
-      localStorage.setItem('postLoginRedirect', location.pathname + location.search);
-      return <Navigate to="/login" replace />;
+      return <Navigate to="/login" state={{ from: location }} replace />;
     }
     console.log("ProtectedRoute: Current user exists, rendering children.");
     return children;
@@ -215,7 +196,8 @@ function App() {
       return <p className="text-center py-10">Initializing app...</p>;
     }
     if (currentUser && !isAuthLoading) {
-      return <Navigate to="/" replace />;
+      const from = location.state?.from?.pathname || '/';
+      return <Navigate to={from} replace />;
     }
     return children;
   };

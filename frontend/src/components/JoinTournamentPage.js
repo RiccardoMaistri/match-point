@@ -35,7 +35,7 @@ function JoinTournamentPage({ currentUser, globalSetError, globalSetIsLoading, g
           return;
         }
 
-        const isParticipant = tourney.participants?.some(p => p.id === currentUser.id);
+        const isParticipant = tourney.participants?.some(p => p.email === currentUser.email);
         
         if (isParticipant) {
           setJoinMessage(`You are already registered for ${tourney.name}`);
