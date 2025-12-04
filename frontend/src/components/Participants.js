@@ -135,13 +135,9 @@ function Participants({ currentUser }) {
   );
 
   return (
-    <div className="fixed top-[44px] left-0 right-0 bottom-[72px] flex flex-col">
+    <div className="fixed top-[60px] left-0 right-0 bottom-[72px] flex flex-col">
       <div className="px-4 pt-3 pb-3">
-        <div className="px-2 flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">Players</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">{participants.length} participants</p>
-          </div>
+        <div className="px-2 flex items-center justify-end">
           {isOwner && tournament.registration_open && (
             <button 
               onClick={handleInvite}
@@ -251,15 +247,6 @@ function Participants({ currentUser }) {
             </div>
           ) : (
             <div>
-              <div className="px-2 mb-3">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-50">Players</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400">
-                  {participants.length} participant{participants.length !== 1 ? 's' : ''}
-                  {isDoubles && teams.length > 0 && (
-                    <span className="text-green-600 dark:text-green-400"> • {teams.length} team{teams.length !== 1 ? 's' : ''} formed</span>
-                  )}
-                </p>
-              </div>
               <div className="bg-white dark:bg-surface-dark rounded-3xl shadow-sm overflow-hidden">
                 <div className="divide-y divide-gray-200 dark:divide-border-dark">
                   {participants.map((participant) => {
@@ -306,7 +293,7 @@ function Participants({ currentUser }) {
                             <p className="text-sm text-slate-500 dark:text-slate-400 truncate">{participant.email}</p>
                           </div>
                         </div>
-                        {isOwner && !(isDoubles && teams.length > 0) && (
+                        {isOwner && tournament.status === 'open' && !(isDoubles && teams.length > 0) && (
                           <button
                             onClick={() => handleRemoveParticipant(participant.id)}
                             className="ml-3 w-8 h-8 flex items-center justify-center text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-full transition-colors flex-shrink-0"

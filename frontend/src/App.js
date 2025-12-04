@@ -2,16 +2,17 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import './App.css';
 import TournamentForm from './components/TournamentForm';
-import TournamentDetail from './components/TournamentDetail';
+import TournamentLayout from './components/TournamentLayout';
+import GroupStage from './components/GroupStage';
+import Playoff from './components/Playoff';
 import LoginPage from './components/LoginPage';
 import RegisterPage from './components/RegisterPage';
 import JoinTournamentPage from './components/JoinTournamentPage';
 import Header from './components/Header';
-import BottomNav from './components/BottomNav';
-import Standings from './components/Standings';
 import Participants from './components/Participants';
 import ConfirmModal from './components/ConfirmModal';
 import InstallPrompt from './components/InstallPrompt';
+import Logout from './components/Logout';
 import TournamentsPage from './pages/TournamentsPage';
 import * as api from './services/api';
 
@@ -98,6 +99,12 @@ function App() {
     } finally {
       setIsAuthLoading(false);
     }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('authToken');
+    setCurrentUser(null);
+    navigate('/login');
   };
 
   const fetchTournaments = useCallback(async () => {
@@ -278,6 +285,7 @@ function App() {
                 <RegisterPage onRegister={handleRegister} error={authError} isLoading={isAuthLoading} />
               </AuthRoute>
             } />
+            <Route path="/logout" element={<Logout onLogout={handleLogout} />} />
             <Route path="/join/:inviteCode" element={
               <ProtectedRoute>
                 <JoinTournamentPage currentUser={currentUser} globalSetIsLoading={setAppIsLoading} globalIsLoading={appIsLoading} globalSetError={setAppError} />
@@ -289,31 +297,20 @@ function App() {
               </ProtectedRoute>
             } />
 
-            <Route path="/standings/:tournamentId" element={
-              <ProtectedRoute>
-                <Standings tournaments={tournaments} />
-              </ProtectedRoute>
-            } />
-            <Route path="/standings" element={
-              <ProtectedRoute>
-                <Standings tournaments={tournaments} />
-              </ProtectedRoute>
-            } />
-            <Route path="/participants/:tournamentId" element={
-              <ProtectedRoute>
-                <Participants currentUser={currentUser} />
-              </ProtectedRoute>
-            } />
-            <Route path="/participants" element={
-              <ProtectedRoute>
-                <Participants currentUser={currentUser} />
-              </ProtectedRoute>
-            } />
             <Route path="/tournaments/:tournamentId" element={
               <ProtectedRoute>
-                <TournamentDetail currentUser={currentUser} />
+                <TournamentLayout currentUser={currentUser} />
               </ProtectedRoute>
-            } />
+            }>
+                <Route index element={<Navigate to="group-stage" replace />} />
+                <Route path="group-stage" element={<GroupStage />} />
+                <Route path="playoff" element={<Playoff />} />
+                <Route path="players" element={<Participants currentUser={currentUser} />} />
+            </Route>
+
+            <Route path="/standings/:tournamentId" element={<Navigate to={`/tournaments/${location.pathname.split('/')[2]}/group-stage`} replace />} />
+            <Route path="/participants/:tournamentId" element={<Navigate to={`/tournaments/${location.pathname.split('/')[2]}/players`} replace />} />
+            
             <Route path="/tournaments" element={<Navigate to="/" replace />} />
             <Route path="*" element={
                 <div className="text-center p-10">
@@ -326,7 +323,8 @@ function App() {
             } />
           </Routes>
         </main>
-      {currentUser && <BottomNav />}
+      {/* BottomNav is now handled inside TournamentLayout for tournament views */}
+      {/* {currentUser && <BottomNav />} */}
       <InstallPrompt />
       <ConfirmModal
         isOpen={confirmModal.isOpen}

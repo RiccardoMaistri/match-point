@@ -24,13 +24,14 @@ async def add_no_cache_header(request: Request, call_next):
 
 origins = [
     "http://localhost:3000",
+    "http://127.0.0.1:3000",
     "http://192.168.1.37:3000",
     "http://192.168.3.62:3000",
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?|https://.*\.ngrok-free\.app",
+    allow_origins=origins,  # Use allow_origins to respect the origins list
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

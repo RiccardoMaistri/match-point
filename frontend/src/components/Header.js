@@ -24,43 +24,42 @@ const Header = ({ title, tournaments, currentTournamentId, onTournamentChange, o
 
   return (
     <>
-    <header className="fixed top-0 left-0 right-0 z-50 px-4 py-1.5 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-sm border-b border-border-light dark:border-border-dark">
-      <div className="flex items-center justify-between">
-        <button onClick={() => setShowFeedback(true)} className="w-10 h-10 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
-          <span className="material-symbols-outlined text-slate-600 dark:text-slate-400">feedback</span>
+    <header className="fixed top-0 left-0 right-0 z-50 px-3 sm:px-4 py-1.5 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-sm border-b border-border-light dark:border-border-dark">
+      <div className="flex items-center justify-between gap-2">
+        <button onClick={() => setShowFeedback(true)} className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors flex-shrink-0">
+          <span className="material-symbols-outlined text-slate-600 dark:text-slate-400 text-xl sm:text-2xl">feedback</span>
         </button>
-        <div className="text-center">
+        <div className="text-center flex-1 min-w-0">
           {tournaments && tournaments.length > 0 ? (
             <>
               <div className="flex items-center justify-center gap-1">
                 <select
                   value={selectedId}
                   onChange={(e) => onTournamentChange(e.target.value)}
-                  className="text-lg font-bold text-slate-900 dark:text-slate-50 bg-transparent border-none focus:outline-none cursor-pointer"
+                  className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-50 bg-transparent border-none focus:outline-none cursor-pointer max-w-full truncate"
                 >
                   {tournaments.map(t => (
                     <option key={t.id} value={t.id}>{t.name}</option>
                   ))}
                 </select>
-                <span className="material-symbols-outlined text-slate-500 dark:text-slate-400">expand_more</span>
               </div>
               {currentTournament && (
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                <p className="text-xs text-slate-500 dark:text-slate-400 truncate px-1">
                   {currentTournament.tournament_type === 'double' ? 'Doubles' : 'Singles'} · {currentTournament.format.replace('_', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')} · {currentTournament.participants?.length || 0} player{currentTournament.participants?.length !== 1 ? 's' : ''}
                 </p>
               )}
             </>
           ) : (
-            <h1 className="text-lg font-bold text-slate-900 dark:text-slate-50">{title}</h1>
+            <h1 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-50">{title}</h1>
           )}
         </div>
         {onAdd && (
           <button
             onClick={onAdd}
-            className="w-10 h-10 flex items-center justify-center bg-primary text-white rounded-full shadow-md hover:bg-primary/90 transition-colors"
+            className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center bg-primary text-white rounded-full shadow-md hover:bg-primary/90 transition-colors flex-shrink-0"
             aria-label="Create new tournament"
           >
-            <span className="material-symbols-outlined text-2xl">add</span>
+            <span className="material-symbols-outlined text-xl sm:text-2xl">add</span>
           </button>
         )}
       </div>

@@ -158,18 +158,13 @@ function RecordResultModal({ isOpen, onClose, match, participants, onSubmitResul
           </button>
         </div>
 
-        <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-3 mb-6">
-          <p className="text-sm text-slate-600 dark:text-slate-400">Match: <span className="font-semibold text-slate-900 dark:text-slate-50">{participant1.name}</span> vs <span className="font-semibold text-slate-900 dark:text-slate-50">{participant2.name}</span></p>
-          {match.round_number && <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Round {match.round_number} · Match {match.match_number}</p>}
-        </div>
-
         <form onSubmit={handleSubmit} className="space-y-5">
           {error && <p className="text-xs text-red-700 bg-red-100 dark:bg-red-500/20 dark:text-red-400 p-3 rounded-2xl border border-red-200 dark:border-red-500/30">{error}</p>}
 
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4 mb-3">
-              <div className="text-sm font-semibold text-slate-900 dark:text-slate-50">{participant1.name}</div>
-              <div className="text-sm font-semibold text-slate-900 dark:text-slate-50">{participant2.name}</div>
+              <div className="text-sm font-semibold text-slate-900 dark:text-slate-50 text-center">{participant1.name}</div>
+              <div className="text-sm font-semibold text-slate-900 dark:text-slate-50 text-center">{participant2.name}</div>
             </div>
             
             <div>
