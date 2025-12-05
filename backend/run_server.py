@@ -6,6 +6,19 @@ import sys
 import time
 import socket
 
+def get_network_ip():
+    """Get the local network IP address"""
+    try:
+        # Create a socket to get the local IP
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        # Connect to an external address (doesn't actually send data)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return None
+
 def is_port_in_use(port):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         return s.connect_ex(('localhost', port)) == 0
@@ -65,11 +78,23 @@ if __name__ == "__main__":
             "npm", "start"
         ], cwd=frontend_dir, env=env)
         
-        print("-" * 50)
-        print(f"Backend running on port {backend_port}")
-        print(f"Frontend running on http://localhost:{frontend_port}")
-        print("-" * 50)
+        # Get network IP
+        network_ip = get_network_ip()
+        
+        print("\n" + "=" * 70)
+        print("  🚀 MATCH POINT SERVER STARTED")
+        print("=" * 70)
+        print("\n📡 BACKEND API:")
+        print(f"   Local:   http://localhost:{backend_port}")
+        if network_ip:
+            print(f"   Network: http://{network_ip}:{backend_port}")
+        print("\n🌐 FRONTEND:")
+        print(f"   Local:   http://localhost:{frontend_port}")
+        if network_ip:
+            print(f"   Network: http://{network_ip}:{frontend_port}")
+        print("\n" + "=" * 70)
         print("Press Ctrl+C to stop all services")
+        print("=" * 70 + "\n")
         
         # Wait for processes
         while True:

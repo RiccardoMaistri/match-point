@@ -137,17 +137,6 @@ function Participants({ currentUser }) {
   return (
     <div className="fixed top-[60px] left-0 right-0 bottom-[72px] flex flex-col">
       <div className="px-4 pt-3 pb-3">
-        <div className="px-2 flex items-center justify-end">
-          {isOwner && tournament.registration_open && (
-            <button 
-              onClick={handleInvite}
-              className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-primary rounded-full hover:bg-indigo-700 transition-colors shadow-md"
-            >
-              <span className="material-symbols-outlined text-base">share</span>
-              <span>Invite</span>
-            </button>
-          )}
-        </div>
         {copyMessage && (
           <div className="mt-3 px-2">
             <p className="text-sm text-green-600 dark:text-green-400">{copyMessage}</p>
