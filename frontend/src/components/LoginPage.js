@@ -12,6 +12,9 @@ const LoginPage = ({ onLogin, error, isLoading }) => {
   const from = location.state?.from?.pathname || '/';
 
   useEffect(() => {
+    if (from.startsWith('/join/')) {
+       localStorage.setItem('postLoginRedirect', from);
+    }
     const checkForTournamentInvite = async () => {
       if (from.startsWith('/join/')) {
         const inviteCode = from.split('/join/')[1];
@@ -95,7 +98,7 @@ const LoginPage = ({ onLogin, error, isLoading }) => {
         </form>
 
         <p className="text-center text-sm text-secondary-text mt-8">
-          Don't have an account? <Link to="/register" className="font-medium text-primary hover:text-primary-hover">Register</Link>.
+          Don't have an account? <Link to="/register" state={location.state} className="font-medium text-primary hover:text-primary-hover">Register</Link>.
         </p>
       </div>
     </div>

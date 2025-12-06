@@ -15,6 +15,8 @@ import InstallPrompt from './components/InstallPrompt';
 import Logout from './components/Logout';
 import TournamentsPage from './pages/TournamentsPage';
 import * as api from './services/api';
+import AuthRoute from './components/AuthRoute';
+import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
   const [tournaments, setTournaments] = useState([]);
@@ -185,29 +187,7 @@ function App() {
     }
   };
 
-  const ProtectedRoute = ({ children }) => {
-    console.log("ProtectedRoute: isInitializing", isInitializing, "currentUser", !!currentUser, "location", location.pathname);
-    if (isInitializing) {
-      return <p className="text-center py-10">Initializing app...</p>;
-    }
-    if (!currentUser) {
-      console.log("ProtectedRoute: No current user, redirecting to /login");
-      return <Navigate to="/login" state={{ from: location }} replace />;
-    }
-    console.log("ProtectedRoute: Current user exists, rendering children.");
-    return children;
-  };
 
-  const AuthRoute = ({ children }) => {
-     if (isInitializing) {
-      return <p className="text-center py-10">Initializing app...</p>;
-    }
-    if (currentUser && !isAuthLoading) {
-      const from = location.state?.from?.pathname || '/';
-      return <Navigate to={from} replace />;
-    }
-    return children;
-  };
 
   const getCurrentTournamentId = () => {
     if (location.pathname.startsWith('/tournaments/')) {
@@ -262,11 +242,12 @@ function App() {
             onSubmit={editingTournament ? handleUpdateTournamentSubmit : handleCreateTournamentSubmit}
             initialData={editingTournament}
             onCancel={() => {
-              setShowCreateForm(false);
+          setShowCreateForm(false);
               setEditingTournament(null);
             }}
           />
         )}
+
         <main className="pt-20 pb-20 flex-grow">
           {appError && (
             <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-md shadow-md" role="alert">
@@ -276,29 +257,35 @@ function App() {
           )}
           <Routes>
             <Route path="/login" element={
-              <AuthRoute>
+              <AuthRoute currentUser={currentUser} isInitializing={isInitializing} isAuthLoading={isAuthLoading}>
                 <LoginPage onLogin={handleLogin} error={authError} isLoading={isAuthLoading} />
               </AuthRoute>
             } />
             <Route path="/register" element={
-              <AuthRoute>
+              <AuthRoute currentUser={currentUser} isInitializing={isInitializing} isAuthLoading={isAuthLoading}>
                 <RegisterPage onRegister={handleRegister} error={authError} isLoading={isAuthLoading} />
               </AuthRoute>
             } />
             <Route path="/logout" element={<Logout onLogout={handleLogout} />} />
-            <Route path="/join/:inviteCode" element={
-              <ProtectedRoute>
-                <JoinTournamentPage currentUser={currentUser} globalSetIsLoading={setAppIsLoading} globalIsLoading={appIsLoading} globalSetError={setAppError} />
+              <Route path="/join/:inviteCode" element={
+              <ProtectedRoute currentUser={currentUser} isInitializing={isInitializing}>
+                <JoinTournamentPage 
+                  currentUser={currentUser} 
+                  globalSetIsLoading={setAppIsLoading} 
+                  globalIsLoading={appIsLoading} 
+                  globalSetError={setAppError}
+                  onJoinSuccess={fetchTournaments}
+                />
               </ProtectedRoute>
             } />
              <Route path="/" element={
-              <ProtectedRoute>
+              <ProtectedRoute currentUser={currentUser} isInitializing={isInitializing}>
                 <TournamentsPage currentUser={currentUser} onCreateTournament={() => setShowCreateForm(true)} />
               </ProtectedRoute>
             } />
 
             <Route path="/tournaments/:tournamentId" element={
-              <ProtectedRoute>
+              <ProtectedRoute currentUser={currentUser} isInitializing={isInitializing}>
                 <TournamentLayout currentUser={currentUser} />
               </ProtectedRoute>
             }>

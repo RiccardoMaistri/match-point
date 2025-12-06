@@ -23,12 +23,29 @@ def is_port_in_use(port):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         return s.connect_ex(('localhost', port)) == 0
 
-def find_free_port(start_port):
-    port = start_port
-    while is_port_in_use(port):
-        print(f"Port {port} is in use, trying next port...")
-        port += 1
-    return port
+def kill_process_on_port(port):
+    """Attempts to kill the process using the specified port"""
+    try:
+        # Find PID using lsof
+        cmd = f"lsof -t -i:{port}"
+        pid = subprocess.check_output(cmd, shell=True).decode().strip()
+        if pid:
+            print(f"Port {port} is in use by PID {pid}. Killing it...")
+            os.kill(int(pid), signal.SIGKILL)
+            time.sleep(1) # Wait for release
+            return True
+    except subprocess.CalledProcessError:
+        return False # Port is free
+    except Exception as e:
+        print(f"Error killing process on port {port}: {e}")
+        return False
+
+def ensure_port_free(port):
+    if is_port_in_use(port):
+        kill_process_on_port(port)
+        if is_port_in_use(port):
+             print(f"WARNING: Could not free port {port}. Startup might fail.")
+
 
 def cleanup(backend_proc, frontend_proc):
     print("\nStopping all services...")
@@ -50,9 +67,13 @@ if __name__ == "__main__":
     signal.signal(signal.SIGTERM, signal_handler)
     
     try:
-        # Find free ports
-        backend_port = find_free_port(8001)
-        frontend_port = find_free_port(3000)
+        # Enforce ports
+        backend_port = 8001
+        frontend_port = 3000
+        
+        print(f"Checking ports {backend_port} and {frontend_port}...")
+        ensure_port_free(backend_port)
+        ensure_port_free(frontend_port)
         
         # Get parent directory (project root)
         project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -66,7 +87,9 @@ if __name__ == "__main__":
             "--reload", "--host", "0.0.0.0", "--port", str(backend_port)
         ], cwd=backend_dir)
         
-        time.sleep(2)
+        # Wait for backend to be ready
+        print("Waiting for backend to start...")
+        time.sleep(3)
         
         # Start frontend
         print(f"Starting frontend on port {frontend_port}...")

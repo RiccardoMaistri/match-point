@@ -684,63 +684,50 @@ async def record_match_result(
         current_round = match_to_update.round_number
         playoff_matches = [m for m in tournament.matches if m.phase == 'playoff']
         
-        current_round_matches = [m for m in playoff_matches if m.round_number == current_round]
+        # Sort matches by match_number to ensure correct index alignment
+        # This relies on the generation order being strictly consistent (Round 1 matches, then Round 2, etc.)
+        playoff_matches.sort(key=lambda m: m.match_number)
         
-        if all(m.status == 'completed' for m in current_round_matches):
-            sorted_round_matches = sorted(current_round_matches, key=lambda m: m.match_number)
-            winners = [m.winner_id for m in sorted_round_matches if m.winner_id]
-            
-            if len(winners) == 2:
-                # Generate final match
-                next_round_number = current_round + 1
-                match_num = max(m.match_number for m in tournament.matches) + 1
+        current_round_matches = [m for m in playoff_matches if m.round_number == current_round]
+        next_round_matches = [m for m in playoff_matches if m.round_number == current_round + 1]
+
+        if next_round_matches:
+            # Find the index of the current match within its round
+            # We use generic matching by ID to be safe, or just order
+            try:
+                current_match_index = next(i for i, m in enumerate(current_round_matches) if m.id == match_to_update.id)
                 
-                final_match = Match(
-                    participant1_id=winners[0],
-                    participant2_id=winners[1],
-                    match_number=match_num,
-                    round_number=next_round_number,
-                    phase='playoff',
-                )
-                tournament.matches.append(final_match)
-            elif len(winners) == 1:
-                tournament.status = "completed"
-                # Find and display the winner
-                winner = next(
-                    (p for p in tournament.participants if p.id == winners[0]),
-                    None,
-                )
-                if winner:
-                    print(f"🏆 TOURNAMENT WINNER: {winner.name} 🏆")
-            elif len(winners) > 2:
-                next_round_number = current_round + 1
-                match_num = max(m.match_number for m in tournament.matches) + 1
+                # Determine next match index (standard bracket logic: pair 0+1 -> 0, 2+3 -> 1)
+                next_match_index = current_match_index // 2
                 
-                for i in range(0, len(winners), 2):
-                    if i + 1 < len(winners):
-                        new_match = Match(
-                            participant1_id=winners[i],
-                            participant2_id=winners[i + 1],
-                            match_number=match_num,
-                            round_number=next_round_number,
-                            phase='playoff',
-                        )
-                        tournament.matches.append(new_match)
-                        match_num += 1
+                if next_match_index < len(next_round_matches):
+                    target_match = next_round_matches[next_match_index]
+                    
+                    # Determine which slot to fill
+                    if current_match_index % 2 == 0:
+                        target_match.participant1_id = match_to_update.winner_id
                     else:
-                        # Odd number of winners, create bye match
-                        new_match = Match(
-                            participant1_id=winners[i],
-                            participant2_id=None,
-                            match_number=match_num,
-                            round_number=next_round_number,
-                            phase='playoff',
-                            is_bye=True,
-                            winner_id=winners[i],
-                            status='completed'
-                        )
-                        tournament.matches.append(new_match)
-                        match_num += 1
+                        target_match.participant2_id = match_to_update.winner_id
+                        
+                    # Find the target match in the main tournament list and update it
+                    # (Tournament.matches list modification needs correct index)
+                    for idx, m in enumerate(tournament.matches):
+                        if m.id == target_match.id:
+                            tournament.matches[idx] = target_match
+                            break
+                            
+            except ValueError:
+                print(f"Error: Current match {match_to_update.id} not found in round {current_round}")
+        else:
+            # No next round matches -> This was the Final
+            # Implicitly handled below by tournament.status = "completed" check if needed,
+            # but usually we mark tournament complete here
+            if len(current_round_matches) == 1:
+                # If there's only 1 match in this round, it's definitively the final
+                tournament.status = "completed"
+                winner = next((p for p in tournament.participants if p.id == match_to_update.winner_id), None)
+                if winner:
+                   print(f"🏆 TOURNAMENT WINNER: {winner.name} 🏆")
 
     # Check if tournament was just completed and return winner info
     response_data = {"match": match_to_update}
@@ -829,6 +816,35 @@ async def get_tournament_standings(
     tournament = Tournament(**tournament_dict)
     sorted_standings = _calculate_standings(tournament)
     return {"standings": sorted_standings}
+
+
+@router.get(
+    "/{tournament_id}/progress",
+    summary="Get tournament progress (group stage completion)",
+)
+async def get_tournament_progress(
+    tournament_id: str = Path(..., description="ID del torneo"),
+):
+    tournament_dict = get_tournament_db(tournament_id)
+    if not tournament_dict:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found"
+        )
+
+    tournament = Tournament(**tournament_dict)
+    
+    # Calculate group stage match progress
+    group_matches = [m for m in tournament.matches if m.phase == 'group']
+    total_group_matches = len(group_matches)
+    completed_group_matches = len([m for m in group_matches if m.status == 'completed'])
+    remaining_group_matches = total_group_matches - completed_group_matches
+    
+    return {
+        "total_group_matches": total_group_matches,
+        "completed_group_matches": completed_group_matches,
+        "remaining_group_matches": remaining_group_matches,
+        "status": tournament.status,
+    }
 
 
 @router.post(

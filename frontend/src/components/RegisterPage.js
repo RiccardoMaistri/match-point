@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import * as api from '../services/api';
 
 const RegisterPage = ({ onRegister, error, isLoading }) => {
@@ -11,11 +11,18 @@ const RegisterPage = ({ onRegister, error, isLoading }) => {
   const [formError, setFormError] = useState('');
   const [tournamentName, setTournamentName] = useState(null);
 
+  const location = useLocation();
+
   useEffect(() => {
     const checkForTournamentInvite = async () => {
+      const fromPath = location.state?.from?.pathname;
       const postLoginRedirect = localStorage.getItem('postLoginRedirect');
-      if (postLoginRedirect && postLoginRedirect.startsWith('/join/')) {
-        const inviteCode = postLoginRedirect.split('/join/')[1];
+      
+      const invitePath = fromPath?.startsWith('/join/') ? fromPath : (postLoginRedirect?.startsWith('/join/') ? postLoginRedirect : null);
+
+      if (invitePath) {
+        localStorage.setItem('postLoginRedirect', invitePath); // Ensure it's stored
+        const inviteCode = invitePath.split('/join/')[1];
         try {
           const tournament = await api.getTournamentByInviteCode(inviteCode);
           setTournamentName(tournament.name);
@@ -25,7 +32,7 @@ const RegisterPage = ({ onRegister, error, isLoading }) => {
       }
     };
     checkForTournamentInvite();
-  }, []);
+  }, [location]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -153,7 +160,7 @@ const RegisterPage = ({ onRegister, error, isLoading }) => {
         </form>
 
         <p className="text-center text-sm text-secondary-text mt-8">
-          Already have an account? <Link to="/login" className="font-medium text-primary hover:text-primary-hover">Login</Link>.
+          Already have an account? <Link to="/login" state={location.state} className="font-medium text-primary hover:text-primary-hover">Login</Link>.
         </p>
       </div>
     </div>
